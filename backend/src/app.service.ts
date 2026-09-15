@@ -450,6 +450,10 @@ export class AppService {
       if (backup[chave] !== undefined && !Array.isArray(backup[chave])) {
         throw new BadRequestException(`Campo "backup.${chave}" deve ser uma lista`);
       }
+      // Mesmo teto do /importar/ofx — o limite do body não deve ser a única barreira.
+      if (Array.isArray(backup[chave]) && backup[chave].length > 2000) {
+        throw new BadRequestException(`Limite de 2000 itens em "backup.${chave}"`);
+      }
     }
     return this.contas.manager.transaction(async (tx) => {
       if (modo === 'substituir') {

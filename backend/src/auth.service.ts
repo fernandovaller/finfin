@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomBytes, scrypt as scryptCb, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
-import { Not, Repository } from 'typeorm';
+import { LessThan, Not, Repository } from 'typeorm';
 import { Categoria, TipoCategoria } from './categoria.entity';
 import { Conta } from './conta.entity';
 import { Despesa } from './despesa.entity';
@@ -102,6 +102,11 @@ export class AuthService {
     @InjectRepository(Conta)
     private readonly contas: Repository<Conta>,
   ) {}
+
+  /** Boot: remove sessões expiradas acumuladas no banco. */
+  async onModuleInit(): Promise<void> {
+    await this.sessoes.delete({ expiraEm: LessThan(new Date().toISOString()) });
+  }
 
   async cadastro(body: any): Promise<SessaoCriada> {
     const nome = body?.nome?.trim();
