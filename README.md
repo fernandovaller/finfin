@@ -83,14 +83,6 @@ finfin/
   trocar por migrations antes de qualquer uso em produção).
 - Rode apenas uma instância do backend por vez sobre o mesmo arquivo `.sqlite`.
 
-## Roadmap
-
-- [ ] Autenticação multiusuário
-- [ ] Migrations versionadas (substituir `synchronize`)
-- [ ] PostgreSQL para deploy
-- [ ] Testes automatizados
-- [ ] Importação de extratos (CSV/OFX)
-
 ## Licença
 
 MIT — veja [LICENSE](LICENSE).
