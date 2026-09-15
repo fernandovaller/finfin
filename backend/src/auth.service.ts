@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomBytes, scrypt as scryptCb, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { Categoria, TipoCategoria } from './categoria.entity';
 import { Conta } from './conta.entity';
 import { Despesa } from './despesa.entity';
@@ -181,8 +181,12 @@ export class AuthService {
     return { usuario: publico(await this.usuarios.save(usuario)) };
   }
 
-  /** Troca a senha conferindo a atual. */
-  async trocarSenha(usuarioId: number, body: any): Promise<{ usuario: UsuarioPublico }> {
+  /** Troca a senha conferindo a atual; revoga as demais sessões do usuário. */
+  async trocarSenha(
+    usuarioId: number,
+    body: any,
+    tokenAtual?: string,
+  ): Promise<{ usuario: UsuarioPublico }> {
     const usuario = await this.usuarios.findOneBy({ id: usuarioId });
     if (!usuario) throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
     const atual = body?.senhaAtual;
@@ -194,7 +198,15 @@ export class AuthService {
       throw new BadRequestException('A nova senha deve ter ao menos 6 caracteres');
     }
     usuario.senhaHash = await hashSenha(nova);
-    return { usuario: publico(await this.usuarios.save(usuario)) };
+    const salvo = await this.usuarios.save(usuario);
+    // Token roubado não sobrevive à troca de senha: derruba as outras sessões
+    // (a atual fica, pois quem trocou acabou de provar que sabe a senha).
+    if (tokenAtual) {
+      await this.sessoes.delete({ usuarioId, token: Not(tokenAtual) });
+    } else {
+      await this.sessoes.delete({ usuarioId });
+    }
+    return { usuario: publico(salvo) };
   }
 
   /** Resolve o dono a partir do token Bearer; null quando ausente/inválido/expirado. */

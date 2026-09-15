@@ -45,6 +45,7 @@ export class AuthController {
   @Put('senha')
   @UseGuards(AuthGuard)
   senha(@Req() req: any, @Body() body: any) {
-    return this.auth.trocarSenha(req.usuario.id, body);
+    const token = (req.headers?.authorization ?? '').replace(/^Bearer\s+/i, '').trim();
+    return this.auth.trocarSenha(req.usuario.id, body, token);
   }
 }
