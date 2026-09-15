@@ -1,0 +1,200 @@
+import { useState } from 'react';
+
+export type TipoLancamento = 'receita' | 'despesa';
+
+export interface LancamentoValues {
+  data: string;
+  valor: number;
+  categoria: string;
+  origem: string;
+  formaPagamento: string;
+}
+
+interface Props {
+  tipo: TipoLancamento;
+  onTipoChange?: (t: TipoLancamento) => void;
+  categoriasReceita: string[];
+  categoriasDespesa: string[];
+  formas: string[];
+  initial?: Partial<LancamentoValues>;
+  submitLabel: string;
+  submitting: boolean;
+  onSubmit: (v: LancamentoValues) => void;
+  onErro: (msg: string) => void;
+}
+
+/** Máscara de moeda: dígitos digitados viram centavos (ex.: "25000" → "250,00"). */
+function mascaraMoeda(digitos: string): string {
+  if (digitos === '') return '';
+  return (Number(digitos) / 100).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+const ACCENT: Record<TipoLancamento, { focus: string; submit: string }> = {
+  receita: {
+    focus: 'focus:border-emerald-500 focus:ring-emerald-200',
+    submit: 'bg-emerald-600 hover:bg-emerald-700',
+  },
+  despesa: {
+    focus: 'focus:border-rose-500 focus:ring-rose-200',
+    submit: 'bg-rose-600 hover:bg-rose-700',
+  },
+};
+
+const inputBase =
+  'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:ring-2';
+
+export default function LancamentoForm({
+  tipo,
+  onTipoChange,
+  categoriasReceita,
+  categoriasDespesa,
+  formas,
+  initial,
+  submitLabel,
+  submitting,
+  onSubmit,
+  onErro,
+}: Props) {
+  const opcoes = tipo === 'receita' ? categoriasReceita : categoriasDespesa;
+  const [data, setData] = useState(initial?.data ?? new Date().toISOString().slice(0, 10));
+  const [valor, setValor] = useState(
+    initial?.valor !== undefined ? String(Math.round(initial.valor * 100)) : '',
+  ); // dígitos em centavos
+  const [categoria, setCategoria] = useState(
+    initial?.categoria ?? opcoes[0] ?? '',
+  );
+  const [origem, setOrigem] = useState(initial?.origem ?? '');
+  const [formaPagamento, setFormaPagamento] = useState(initial?.formaPagamento ?? '');
+  const accent = ACCENT[tipo];
+
+  // Preserva categoria histórica que já saiu do catálogo (ex.: renomeada).
+  const opcoesCategoria =
+    categoria && !opcoes.includes(categoria) ? [categoria, ...opcoes] : opcoes;
+
+  function trocarTipo(t: TipoLancamento) {
+    onTipoChange?.(t);
+    const lista = t === 'receita' ? categoriasReceita : categoriasDespesa;
+    setCategoria(lista[0] ?? '');
+  }
+
+  function enviar(e: React.FormEvent) {
+    e.preventDefault();
+    const valorNum = Number(valor) / 100;
+    if (!(valorNum > 0)) {
+      onErro('Informe um valor maior que zero.');
+      return;
+    }
+    if (!categoria) {
+      onErro('Escolha uma categoria (cadastre em Categorias se precisar).');
+      return;
+    }
+    onSubmit({ data, valor: valorNum, categoria, origem, formaPagamento });
+  }
+
+  return (
+    <div>
+      {onTipoChange && (
+        <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 text-sm font-semibold">
+          {(['despesa', 'receita'] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => trocarTipo(t)}
+              className={`rounded-lg px-3 py-2 capitalize transition ${
+                tipo === t
+                  ? t === 'receita'
+                    ? 'bg-emerald-600 text-white shadow'
+                    : 'bg-slate-900 text-white shadow'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+      <form onSubmit={enviar} className="mt-4 space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block text-sm font-medium text-slate-600">
+            Data
+            <input
+              type="date"
+              value={data}
+              onChange={(e) => setData(e.target.value)}
+              required
+              className={`mt-1 ${inputBase} ${accent.focus}`}
+            />
+          </label>
+          <label className="block text-sm font-medium text-slate-600">
+            Valor
+            <div className="relative mt-1">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-slate-400">
+                R$
+              </span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={mascaraMoeda(valor)}
+                onChange={(e) => setValor(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                required
+                placeholder="0,00"
+                className={`w-full rounded-lg border border-slate-300 py-2 pl-10 pr-3 text-sm tabular-nums text-slate-900 outline-none transition focus:ring-2 ${accent.focus}`}
+              />
+            </div>
+          </label>
+        </div>
+        <label className="block text-sm font-medium text-slate-600">
+          Categoria
+          <select
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+            required
+            className={`mt-1 ${inputBase} bg-white ${accent.focus}`}
+          >
+            {opcoesCategoria.length === 0 && <option value="">Nenhuma categoria cadastrada</option>}
+            {opcoesCategoria.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-sm font-medium text-slate-600">
+          {tipo === 'receita' ? 'Origem' : 'Descrição'}
+          <input
+            value={origem}
+            onChange={(e) => setOrigem(e.target.value)}
+            required={tipo === 'receita'}
+            placeholder={tipo === 'receita' ? 'Ex.: Empresa' : 'Ex.: Aluguel'}
+            className={`mt-1 ${inputBase} ${accent.focus}`}
+          />
+        </label>
+        <label className="block text-sm font-medium text-slate-600">
+          Forma de pagamento
+          <select
+            value={formaPagamento}
+            onChange={(e) => setFormaPagamento(e.target.value)}
+            className={`mt-1 ${inputBase} bg-white ${accent.focus}`}
+          >
+            <option value="">Não informada</option>
+            {formas.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="submit"
+          disabled={submitting}
+          className={`w-full rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition disabled:cursor-wait disabled:opacity-60 ${accent.submit}`}
+        >
+          {submitting ? 'Salvando…' : submitLabel}
+        </button>
+      </form>
+    </div>
+  );
+}
