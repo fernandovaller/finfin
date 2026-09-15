@@ -14,7 +14,7 @@ export const CORES_CATEGORIA = [
 ] as const;
 
 @Entity('categorias')
-@Unique(['nome', 'tipo'])
+@Unique(['usuarioId', 'nome', 'tipo'])
 export class Categoria {
   @PrimaryGeneratedColumn()
   id: number;
@@ -27,4 +27,8 @@ export class Categoria {
 
   @Column({ default: 'slate' })
   cor: string;
+
+  /** Dono do item de catálogo. */
+  @Column({ type: 'integer', nullable: true })
+  usuarioId: number | null;
 }

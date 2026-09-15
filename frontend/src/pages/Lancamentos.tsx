@@ -21,6 +21,7 @@ type Edicao = { kind: 'receita'; item: Receita } | { kind: 'despesa'; item: Desp
 
 export default function Lancamentos() {
   const [mes, setMes] = useState(mesAtual);
+  const [contaFiltro, setContaFiltro] = useState<number | ''>('');
   const [receitas, setReceitas] = useState<Receita[]>([]);
   const [despesas, setDespesas] = useState<Despesa[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -31,11 +32,16 @@ export default function Lancamentos() {
   const [tipo, setTipo] = useState<TipoLancamento>('despesa');
   const [formKey, setFormKey] = useState(0);
   const [edicao, setEdicao] = useState<Edicao>(null);
-  const [confirmarExclusao, setConfirmarExclusao] = useState<{ path: string; descricao: string } | null>(null);
+  const [confirmarExclusao, setConfirmarExclusao] = useState<{
+    path: string;
+    descricao: string;
+    grupoPath?: string;
+    parcelaInfo?: string;
+  } | null>(null);
 
-  const { nomesPorTipo, formas, corDe } = useCatalogo();
+  const { nomesPorTipo, formas, contas, contaPorId, corDe } = useCatalogo();
 
-  async function recarregar(mesRef: string) {
+  async function recarregar() {
     try {
       setErro('');
       const [r, d] = await Promise.all([
@@ -54,16 +60,22 @@ export default function Lancamentos() {
 
   useEffect(() => {
     setCarregando(true);
-    void recarregar(mes);
-  }, [mes]);
+    void recarregar();
+  }, []);
 
   const receitasDoMes = useMemo(
-    () => receitas.filter((r) => r.data.startsWith(mes)).sort((a, b) => b.data.localeCompare(a.data)),
-    [receitas, mes],
+    () =>
+      receitas
+        .filter((r) => r.data.startsWith(mes) && (contaFiltro === '' || r.contaId === contaFiltro))
+        .sort((a, b) => b.data.localeCompare(a.data)),
+    [receitas, mes, contaFiltro],
   );
   const despesasDoMes = useMemo(
-    () => despesas.filter((d) => d.data.startsWith(mes)).sort((a, b) => b.data.localeCompare(a.data)),
-    [despesas, mes],
+    () =>
+      despesas
+        .filter((d) => d.data.startsWith(mes) && (contaFiltro === '' || d.contaId === contaFiltro))
+        .sort((a, b) => b.data.localeCompare(a.data)),
+    [despesas, mes, contaFiltro],
   );
 
   async function criar(v: LancamentoValues) {
@@ -76,10 +88,11 @@ export default function Lancamentos() {
         body: JSON.stringify({
           ...v,
           ...(tipo === 'receita' ? { origem: v.origem } : { descricao: v.origem }),
+          ...(tipo === 'despesa' ? { parcelas: v.parcelas ?? 1 } : {}),
         }),
       });
       setFormKey((k) => k + 1);
-      await recarregar(mes);
+      await recarregar();
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Falha ao salvar');
     } finally {
@@ -100,7 +113,7 @@ export default function Lancamentos() {
         }),
       });
       setEdicao(null);
-      await recarregar(mes);
+      await recarregar();
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Falha ao salvar');
     } finally {
@@ -113,7 +126,7 @@ export default function Lancamentos() {
       setErro('');
       await api(path, { method: 'DELETE' });
       setConfirmarExclusao(null);
-      await recarregar(mes);
+      await recarregar();
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Falha ao excluir');
     }
@@ -123,7 +136,22 @@ export default function Lancamentos() {
     <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold tracking-tight">Lançamentos</h1>
-        <MesNav mes={mes} onChange={setMes} />
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={contaFiltro}
+            onChange={(e) => setContaFiltro(e.target.value === '' ? '' : Number(e.target.value))}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none"
+            aria-label="Filtrar por conta"
+          >
+            <option value="">Todas as contas</option>
+            {contas.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.icone ? `${c.icone} ` : ''}{c.nome}
+              </option>
+            ))}
+          </select>
+          <MesNav mes={mes} onChange={setMes} />
+        </div>
       </div>
 
       <AlertaErro mensagem={erro} />
@@ -142,6 +170,7 @@ export default function Lancamentos() {
               categoriasReceita={nomesPorTipo('receita')}
               categoriasDespesa={nomesPorTipo('despesa')}
               formas={formas}
+              contas={contas}
               submitLabel={`Adicionar ${tipo}`}
               submitting={salvando}
               onSubmit={criar}
@@ -175,6 +204,7 @@ export default function Lancamentos() {
                       <p className="truncate text-sm font-semibold">{r.origem}</p>
                       <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
                         {formatarData(r.data)}
+                        {contaPorId(r.contaId) && <span>· {contaPorId(r.contaId)}</span>}
                         <span
                           className={`rounded-full px-2 py-0.5 font-semibold ring-1 ring-inset ${corBadge(corDe(r.categoria, 'receita'))}`}
                         >
@@ -182,6 +212,7 @@ export default function Lancamentos() {
                         </span>
                         {r.formaPagamento && <span>· {r.formaPagamento}</span>}
                       </p>
+                      {r.nota && <p className="truncate text-xs italic text-slate-400">{r.nota}</p>}
                     </div>
                     <p className="text-sm font-bold tabular-nums text-emerald-600">
                       {BRL.format(r.valor)}
@@ -238,13 +269,20 @@ export default function Lancamentos() {
                       <p className="truncate text-sm font-semibold">{d.descricao || d.categoria}</p>
                       <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
                         {formatarData(d.data)}
+                        {contaPorId(d.contaId) && <span>· {contaPorId(d.contaId)}</span>}
                         <span
                           className={`rounded-full px-2 py-0.5 font-semibold ring-1 ring-inset ${corBadge(corDe(d.categoria, 'despesa'))}`}
                         >
                           {d.categoria}
                         </span>
                         {d.formaPagamento && <span>· {d.formaPagamento}</span>}
+                        {d.parcelaAtual && d.parcelaTotal && (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600 ring-1 ring-inset ring-slate-200">
+                            {d.parcelaAtual}/{d.parcelaTotal}
+                          </span>
+                        )}
                       </p>
+                      {d.nota && <p className="truncate text-xs italic text-slate-400">{d.nota}</p>}
                     </div>
                     <p className="text-sm font-bold tabular-nums text-slate-800">
                       {BRL.format(d.valor)}
@@ -265,6 +303,13 @@ export default function Lancamentos() {
                           setConfirmarExclusao({
                             path: `/api/despesas/${d.id}`,
                             descricao: d.descricao || d.categoria,
+                            grupoPath: d.grupoParcela
+                              ? `/api/despesas/${d.id}?escopo=grupo`
+                              : undefined,
+                            parcelaInfo:
+                              d.parcelaAtual && d.parcelaTotal
+                                ? `${d.parcelaAtual}/${d.parcelaTotal}`
+                                : undefined,
                           })
                         }
                         aria-label={`Excluir despesa ${d.descricao || d.categoria}`}
@@ -291,6 +336,7 @@ export default function Lancamentos() {
             categoriasReceita={nomesPorTipo('receita')}
             categoriasDespesa={nomesPorTipo('despesa')}
             formas={formas}
+            contas={contas}
             initial={
               edicao.kind === 'receita'
                 ? {
@@ -299,6 +345,8 @@ export default function Lancamentos() {
                     categoria: edicao.item.categoria,
                     origem: edicao.item.origem,
                     formaPagamento: edicao.item.formaPagamento,
+                    contaId: edicao.item.contaId ?? '',
+                    nota: edicao.item.nota ?? '',
                   }
                 : {
                     data: edicao.item.data,
@@ -306,6 +354,8 @@ export default function Lancamentos() {
                     categoria: edicao.item.categoria,
                     origem: edicao.item.descricao,
                     formaPagamento: edicao.item.formaPagamento,
+                    contaId: edicao.item.contaId ?? '',
+                    nota: edicao.item.nota ?? '',
                   }
             }
             submitLabel="Salvar alterações"
@@ -323,12 +373,37 @@ export default function Lancamentos() {
         </Modal>
       )}
 
-      {confirmarExclusao && (
+      {confirmarExclusao && !confirmarExclusao.grupoPath && (
         <ConfirmarExclusao
           descricao={confirmarExclusao.descricao}
           onCancelar={() => setConfirmarExclusao(null)}
           onConfirmar={() => excluir(confirmarExclusao.path)}
         />
+      )}
+
+      {confirmarExclusao?.grupoPath && (
+        <Modal titulo="Excluir parcela?" onFechar={() => setConfirmarExclusao(null)}>
+          <p className="text-sm text-slate-600">
+            <strong>“{confirmarExclusao.descricao}”</strong> é a parcela{' '}
+            {confirmarExclusao.parcelaInfo} de um parcelamento. O que excluir?
+          </p>
+          <div className="mt-5 grid gap-2">
+            <button
+              type="button"
+              onClick={() => excluir(confirmarExclusao.path)}
+              className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+            >
+              Só esta parcela
+            </button>
+            <button
+              type="button"
+              onClick={() => excluir(confirmarExclusao.grupoPath!)}
+              className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-red-700"
+            >
+              Todas as parcelas
+            </button>
+          </div>
+        </Modal>
       )}
     </main>
   );

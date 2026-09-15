@@ -1,27 +1,55 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { AuthProvider, useAuth } from './auth';
 import Layout from './Layout';
 import Categorias from './pages/Categorias';
+import Contas from './pages/Contas';
 import FormasPagamento from './pages/FormasPagamento';
 import Home from './pages/Home';
 import Lancamentos from './pages/Lancamentos';
+import Login from './pages/Login';
+import Perfil from './pages/Perfil';
 import Relatorios from './pages/Relatorios';
 import './index.css';
 
+function RotaProtegida({ children }: { children: React.ReactNode }) {
+  const { usuario, carregando } = useAuth();
+  if (carregando) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-900">
+        <p className="text-sm text-slate-400">Carregando…</p>
+      </main>
+    );
+  }
+  if (!usuario) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <HashRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="lancamentos" element={<Lancamentos />} />
-          <Route path="relatorios" element={<Relatorios />} />
-          <Route path="categorias" element={<Categorias />} />
-          <Route path="formas-pagamento" element={<FormasPagamento />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </HashRouter>
+    <AuthProvider>
+      <HashRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            element={
+              <RotaProtegida>
+                <Layout />
+              </RotaProtegida>
+            }
+          >
+            <Route index element={<Home />} />
+            <Route path="lancamentos" element={<Lancamentos />} />
+            <Route path="relatorios" element={<Relatorios />} />
+            <Route path="categorias" element={<Categorias />} />
+            <Route path="contas" element={<Contas />} />
+            <Route path="formas-pagamento" element={<FormasPagamento />} />
+            <Route path="perfil" element={<Perfil />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </HashRouter>
+    </AuthProvider>
   </React.StrictMode>,
 );

@@ -41,7 +41,10 @@ export default function FormasPagamento() {
     setSalvando(true);
     try {
       setErro('');
-      await api('/api/formas-pagamento', { method: 'POST', body: JSON.stringify({ nome }) });
+      await api('/api/formas-pagamento', {
+        method: 'POST',
+        body: JSON.stringify({ nome }),
+      });
       setNome('');
       await recarregar();
     } catch (err) {
@@ -86,6 +89,9 @@ export default function FormasPagamento() {
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
       <h1 className="text-xl font-bold tracking-tight">Formas de pagamento</h1>
+      <p className="text-sm text-slate-500">
+        Texto simples usado nos lançamentos (ex.: PIX, Crédito à vista).
+      </p>
       <AlertaErro mensagem={erro} />
 
       <div className="grid items-start gap-6 lg:grid-cols-5">
@@ -101,7 +107,7 @@ export default function FormasPagamento() {
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 required
-                placeholder="Ex.: Vale-refeição"
+                placeholder="Ex.: PIX"
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
               />
             </label>
@@ -131,7 +137,7 @@ export default function FormasPagamento() {
               {itens.map((f) =>
                 editando?.id === f.id ? (
                   <li key={f.id} className="py-3">
-                    <form onSubmit={salvarEdicao} className="flex items-center gap-2">
+                    <form onSubmit={salvarEdicao} className="flex flex-wrap items-center gap-2">
                       <input
                         value={editando.nome}
                         onChange={(e) => setEditando({ ...editando, nome: e.target.value })}
@@ -156,7 +162,9 @@ export default function FormasPagamento() {
                   </li>
                 ) : (
                   <li key={f.id} className="flex items-center gap-3 py-2.5">
-                    <span className="min-w-0 flex-1 truncate text-sm font-semibold">{f.nome}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{f.nome}</p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => setEditando(f)}

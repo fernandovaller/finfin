@@ -22,15 +22,17 @@ export default function Home() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
   const [sincronizadoEm, setSincronizadoEm] = useState<Date | null>(null);
-  const { corDe } = useCatalogo();
+  const { corDe, contas, contaPorId } = useCatalogo();
+  const [contaFiltro, setContaFiltro] = useState<number | ''>('');
 
   useEffect(() => {
     let ativo = true;
     setCarregando(true);
+    const qs = contaFiltro === '' ? '' : `&contaId=${contaFiltro}`;
     Promise.all([
       api<Receita[]>('/api/receitas'),
       api<Despesa[]>('/api/despesas'),
-      api<Resumo>(`/api/resumo?mes=${mes}`),
+      api<Resumo>(`/api/resumo?mes=${mes}${qs}`),
     ])
       .then(([r, d, s]) => {
         if (!ativo) return;
@@ -45,23 +47,39 @@ export default function Home() {
     return () => {
       ativo = false;
     };
-  }, [mes]);
+  }, [mes, contaFiltro]);
 
   const recentes = useMemo(() => {
+    const f = (id: number | null) => contaFiltro === '' || id === contaFiltro;
     const rs = receitas
-      .filter((r) => r.data.startsWith(mes))
-      .map((r) => ({ id: `r-${r.id}`, data: r.data, titulo: r.origem, detalhe: r.categoria, valor: r.valor, tipo: 'receita' as const }));
+      .filter((r) => r.data.startsWith(mes) && f(r.contaId))
+      .map((r) => ({ id: `r-${r.id}`, data: r.data, titulo: r.origem, detalhe: r.categoria, conta: contaPorId(r.contaId), valor: r.valor, tipo: 'receita' as const }));
     const ds = despesas
-      .filter((d) => d.data.startsWith(mes))
-      .map((d) => ({ id: `d-${d.id}`, data: d.data, titulo: d.descricao || d.categoria, detalhe: d.categoria, valor: d.valor, tipo: 'despesa' as const }));
+      .filter((d) => d.data.startsWith(mes) && f(d.contaId))
+      .map((d) => ({ id: `d-${d.id}`, data: d.data, titulo: d.descricao || d.categoria, detalhe: d.categoria, conta: contaPorId(d.contaId), valor: d.valor, tipo: 'despesa' as const }));
     return [...rs, ...ds].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 8);
-  }, [receitas, despesas, mes]);
+  }, [receitas, despesas, mes, contaFiltro, contaPorId]);
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold tracking-tight">Home</h1>
-        <MesNav mes={mes} onChange={setMes} />
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={contaFiltro}
+            onChange={(e) => setContaFiltro(e.target.value === '' ? '' : Number(e.target.value))}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none"
+            aria-label="Filtrar por conta"
+          >
+            <option value="">Todas as contas</option>
+            {contas.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.icone ? `${c.icone} ` : ''}{c.nome}
+              </option>
+            ))}
+          </select>
+          <MesNav mes={mes} onChange={setMes} />
+        </div>
       </div>
 
       <AlertaErro mensagem={erro} />
@@ -70,8 +88,8 @@ export default function Home() {
         resumo={resumo}
         carregando={carregando}
         mes={mes}
-        qtdReceitas={receitas.filter((r) => r.data.startsWith(mes)).length}
-        qtdDespesas={despesas.filter((d) => d.data.startsWith(mes)).length}
+        qtdReceitas={receitas.filter((r) => r.data.startsWith(mes) && (contaFiltro === '' || r.contaId === contaFiltro)).length}
+        qtdDespesas={despesas.filter((d) => d.data.startsWith(mes) && (contaFiltro === '' || d.contaId === contaFiltro)).length}
       />
 
       <section
@@ -115,6 +133,7 @@ export default function Home() {
                   <p className="truncate text-sm font-semibold">{item.titulo}</p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
                     {formatarData(item.data)}
+                    {item.conta && <span>· {item.conta}</span>}
                     <span
                       className={`rounded-full px-2 py-0.5 font-semibold ring-1 ring-inset ${item.tipo === 'receita' ? 'bg-emerald-100 text-emerald-800 ring-emerald-200' : corBadge(corDe(item.detalhe, 'despesa'))}`}
                     >

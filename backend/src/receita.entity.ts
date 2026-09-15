@@ -19,4 +19,15 @@ export class Receita {
 
   @Column({ default: '' })
   formaPagamento: string;
+
+  /** Conta dona do lançamento. Obrigatório (sem FK rígida; validado no service). */
+  @Column({ type: 'integer', nullable: true })
+  contaId: number | null;
+
+  @Column({ default: '' })
+  nota: string;
+
+  /** Dono do lançamento. Nullable para preservar base anterior ao login. */
+  @Column({ type: 'integer', nullable: true })
+  usuarioId: number | null;
 }

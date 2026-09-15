@@ -7,21 +7,36 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Categoria, CORES_CATEGORIA, TipoCategoria } from './categoria.entity';
+import { Conta } from './conta.entity';
 import { Despesa } from './despesa.entity';
 import { FormaPagamento } from './forma-pagamento.entity';
 import { Receita } from './receita.entity';
 
 const SEED_CATEGORIAS: Array<{ nome: string; tipo: TipoCategoria; cor: string }> = [
-  { nome: 'Necessidades', tipo: 'despesa', cor: 'sky' },
-  { nome: 'Renda', tipo: 'despesa', cor: 'violet' },
-  { nome: 'Dívidas', tipo: 'despesa', cor: 'amber' },
-  { nome: 'Desejos', tipo: 'despesa', cor: 'pink' },
+  { nome: 'Moradia', tipo: 'despesa', cor: 'amber' },
+  { nome: 'Alimentação', tipo: 'despesa', cor: 'emerald' },
+  { nome: 'Transporte', tipo: 'despesa', cor: 'sky' },
+  { nome: 'Saúde', tipo: 'despesa', cor: 'rose' },
+  { nome: 'Educação', tipo: 'despesa', cor: 'violet' },
+  { nome: 'Lazer e entretenimento', tipo: 'despesa', cor: 'pink' },
+  { nome: 'Compras e vestuário', tipo: 'despesa', cor: 'teal' },
+  { nome: 'Contas e serviços', tipo: 'despesa', cor: 'slate' },
+  { nome: 'Dívidas e financiamentos', tipo: 'despesa', cor: 'amber' },
+  { nome: 'Investimentos e poupança', tipo: 'despesa', cor: 'emerald' },
   { nome: 'Salário', tipo: 'receita', cor: 'emerald' },
   { nome: 'Freelance', tipo: 'receita', cor: 'teal' },
   { nome: 'Outros', tipo: 'receita', cor: 'slate' },
 ];
 
-const SEED_FORMAS = ['Dinheiro', 'PIX', 'Cartão de crédito', 'Cartão de débito', 'Débito automático', 'Outro'];
+const SEED_FORMAS: string[] = [
+  '💳 Cartão de Crédito',
+  '⚡ Pix',
+  '🏦 Cartão de Débito',
+  '📄 Boleto Bancário',
+  '💵 Dinheiro em Espécie',
+  '🔄 Transferência Bancária',
+  '📱 Carteiras Digitais / NFC',
+];
 
 function plural(n: number): string {
   return `${n} lançamento${n === 1 ? '' : 's'}`;
@@ -38,24 +53,71 @@ export class CatalogoService {
     private readonly receitas: Repository<Receita>,
     @InjectRepository(Despesa)
     private readonly despesas: Repository<Despesa>,
+    @InjectRepository(Conta)
+    private readonly contas: Repository<Conta>,
   ) {}
 
-  /** Seed executado no boot quando as tabelas estão vazias (preserva o catálogo atual). */
+  /** Boot: remove UNIQUE legado global + colunas legadas da forma (tipo/contaId). */
   async onModuleInit(): Promise<void> {
-    if ((await this.categorias.count()) === 0) {
-      await this.categorias.save(SEED_CATEGORIAS);
-    }
-    if ((await this.formas.count()) === 0) {
-      await this.formas.save(SEED_FORMAS.map((nome) => ({ nome })));
+    await this.migrarUnicosPorUsuario();
+    await this.removerColunasLegadasForma();
+  }
+
+  /**
+   * Bases criadas antes do login têm `UNIQUE("nome")` em formas_pagamento e
+   * contas; o synchronize adiciona o UNIQUE composto mas não remove o antigo,
+   * o que impediria dois usuários de terem itens com o mesmo nome.
+   * SQLite não tem DROP CONSTRAINT — recria a tabela preservando os dados,
+   * mantendo os nomes de constraint que o TypeORM espera.
+   */
+  private async migrarUnicosPorUsuario(): Promise<void> {
+    const defs: Array<{ name: string; sql: string }> = await this.categorias.query(
+      `SELECT name, sql FROM sqlite_master WHERE type = 'table' AND name IN ('formas_pagamento', 'contas')`,
+    );
+    for (const def of defs) {
+      if (def.sql.includes('UNIQUE ("nome")')) {
+        await this.recriarSemUnicoLegado(def.name);
+      }
     }
   }
 
-  listCategorias(tipo?: string): Promise<Categoria[]> {
-    const where = tipo === 'receita' || tipo === 'despesa' ? { tipo: tipo as TipoCategoria } : {};
+  private async recriarSemUnicoLegado(tabela: string): Promise<void> {
+    const nova =
+      tabela === 'formas_pagamento'
+        ? `"id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "nome" varchar NOT NULL, "usuarioId" integer, CONSTRAINT "UQ_8637523d58034a1c88909aee767" UNIQUE ("usuarioId", "nome")`
+        : `"id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "nome" varchar NOT NULL, "saldoInicial" real NOT NULL DEFAULT (0), "nota" varchar NOT NULL DEFAULT (''), "icone" varchar NOT NULL DEFAULT (''), "principal" boolean NOT NULL DEFAULT (0), "usuarioId" integer, CONSTRAINT "UQ_5ba40a12dad67be3db12892b719" UNIQUE ("usuarioId", "nome")`;
+    const cols =
+      tabela === 'formas_pagamento' ? '"id", "nome", "usuarioId"' : '"id", "nome", "saldoInicial", "usuarioId"';
+    await this.categorias.query(`CREATE TABLE "${tabela}_nova" (${nova})`);
+    await this.categorias.query(
+      `INSERT INTO "${tabela}_nova" (${cols}) SELECT ${cols} FROM "${tabela}"`,
+    );
+    await this.categorias.query(`DROP TABLE "${tabela}"`);
+    await this.categorias.query(`ALTER TABLE "${tabela}_nova" RENAME TO "${tabela}"`);
+  }
+
+  /** Forma agora é texto simples: derruba colunas legadas tipo/contaId se existirem. */
+  private async removerColunasLegadasForma(): Promise<void> {
+    const cols: Array<{ name: string }> = await this.categorias.query(
+      `PRAGMA table_info('formas_pagamento')`,
+    );
+    const nomes = new Set(cols.map((c) => c.name));
+    for (const legada of ['tipo', 'contaId']) {
+      if (nomes.has(legada)) {
+        await this.categorias.query(`ALTER TABLE "formas_pagamento" DROP COLUMN "${legada}"`);
+      }
+    }
+  }
+
+  listCategorias(usuarioId: number, tipo?: string): Promise<Categoria[]> {
+    const where =
+      tipo === 'receita' || tipo === 'despesa'
+        ? { usuarioId, tipo: tipo as TipoCategoria }
+        : { usuarioId };
     return this.categorias.find({ where, order: { nome: 'ASC' } });
   }
 
-  async createCategoria(body: any): Promise<Categoria> {
+  async createCategoria(usuarioId: number, body: any): Promise<Categoria> {
     const nome = body?.nome?.trim();
     if (!nome) throw new BadRequestException('Campo obrigatório: nome');
     const tipo = body?.tipo;
@@ -67,14 +129,14 @@ export class CatalogoService {
       throw new BadRequestException(`Campo "cor" deve ser uma de: ${CORES_CATEGORIA.join(', ')}`);
     }
     try {
-      return await this.categorias.save({ nome, tipo, cor });
+      return await this.categorias.save({ nome, tipo, cor, usuarioId });
     } catch {
       throw new ConflictException('Já existe uma categoria com esse nome para esse tipo');
     }
   }
 
-  async updateCategoria(id: number, body: any): Promise<Categoria> {
-    const categoria = await this.categorias.findOneBy({ id });
+  async updateCategoria(usuarioId: number, id: number, body: any): Promise<Categoria> {
+    const categoria = await this.categorias.findOneBy({ id, usuarioId });
     if (!categoria) throw new NotFoundException('Categoria não encontrada');
     if (body?.nome !== undefined) {
       if (!body.nome.trim()) throw new BadRequestException('Campo "nome" não pode ser vazio');
@@ -93,35 +155,35 @@ export class CatalogoService {
     }
   }
 
-  async deleteCategoria(id: number): Promise<void> {
-    const categoria = await this.categorias.findOneBy({ id });
+  async deleteCategoria(usuarioId: number, id: number): Promise<void> {
+    const categoria = await this.categorias.findOneBy({ id, usuarioId });
     if (!categoria) throw new NotFoundException('Categoria não encontrada');
     const repo = categoria.tipo === 'receita' ? this.receitas : this.despesas;
-    const emUso = await repo.countBy({ categoria: categoria.nome });
+    const emUso = await repo.countBy({ categoria: categoria.nome, usuarioId });
     if (emUso > 0) {
       throw new ConflictException(
         `Categoria em uso em ${plural(emUso)} — não pode ser excluída`,
       );
     }
-    await this.categorias.delete(id);
+    await this.categorias.delete({ id, usuarioId });
   }
 
-  listFormas(): Promise<FormaPagamento[]> {
-    return this.formas.find({ order: { nome: 'ASC' } });
+  listFormas(usuarioId: number): Promise<FormaPagamento[]> {
+    return this.formas.find({ where: { usuarioId }, order: { nome: 'ASC' } });
   }
 
-  async createForma(body: any): Promise<FormaPagamento> {
+  async createForma(usuarioId: number, body: any): Promise<FormaPagamento> {
     const nome = body?.nome?.trim();
     if (!nome) throw new BadRequestException('Campo obrigatório: nome');
     try {
-      return await this.formas.save({ nome });
+      return await this.formas.save({ nome, usuarioId });
     } catch {
       throw new ConflictException('Já existe uma forma de pagamento com esse nome');
     }
   }
 
-  async updateForma(id: number, body: any): Promise<FormaPagamento> {
-    const forma = await this.formas.findOneBy({ id });
+  async updateForma(usuarioId: number, id: number, body: any): Promise<FormaPagamento> {
+    const forma = await this.formas.findOneBy({ id, usuarioId });
     if (!forma) throw new NotFoundException('Forma de pagamento não encontrada');
     if (body?.nome !== undefined) {
       if (!body.nome.trim()) throw new BadRequestException('Campo "nome" não pode ser vazio');
@@ -134,12 +196,12 @@ export class CatalogoService {
     }
   }
 
-  async deleteForma(id: number): Promise<void> {
-    const forma = await this.formas.findOneBy({ id });
+  async deleteForma(usuarioId: number, id: number): Promise<void> {
+    const forma = await this.formas.findOneBy({ id, usuarioId });
     if (!forma) throw new NotFoundException('Forma de pagamento não encontrada');
     const [emReceitas, emDespesas] = await Promise.all([
-      this.receitas.countBy({ formaPagamento: forma.nome }),
-      this.despesas.countBy({ formaPagamento: forma.nome }),
+      this.receitas.countBy({ formaPagamento: forma.nome, usuarioId }),
+      this.despesas.countBy({ formaPagamento: forma.nome, usuarioId }),
     ]);
     const emUso = emReceitas + emDespesas;
     if (emUso > 0) {
@@ -147,6 +209,88 @@ export class CatalogoService {
         `Forma de pagamento em uso em ${plural(emUso)} — não pode ser excluída`,
       );
     }
-    await this.formas.delete(id);
+    await this.formas.delete({ id, usuarioId });
+  }
+
+  listContas(usuarioId: number): Promise<Conta[]> {
+    return this.contas.find({ where: { usuarioId }, order: { nome: 'ASC' } });
+  }
+
+  async createConta(usuarioId: number, body: any): Promise<Conta> {
+    const nome = body?.nome?.trim();
+    if (!nome) throw new BadRequestException('Campo obrigatório: nome');
+    const saldoInicial = body?.saldoInicial ?? 0;
+    if (typeof saldoInicial !== 'number' || Number.isNaN(saldoInicial)) {
+      throw new BadRequestException('Campo "saldoInicial" deve ser um número');
+    }
+    const nota = typeof body?.nota === 'string' ? body.nota : '';
+    const icone = typeof body?.icone === 'string' ? body.icone : '';
+    const principal = body?.principal === true;
+    try {
+      const conta = await this.contas.save({ nome, saldoInicial, nota, icone, principal, usuarioId });
+      if (principal) await this.marcarPrincipal(usuarioId, conta.id);
+      return await this.contas.findOneByOrFail({ id: conta.id, usuarioId });
+    } catch (e) {
+      if (e instanceof NotFoundException) throw e;
+      throw new ConflictException('Já existe uma conta com esse nome');
+    }
+  }
+
+  async updateConta(usuarioId: number, id: number, body: any): Promise<Conta> {
+    const conta = await this.contas.findOneBy({ id, usuarioId });
+    if (!conta) throw new NotFoundException('Conta não encontrada');
+    if (body?.nome !== undefined) {
+      if (!body.nome.trim()) throw new BadRequestException('Campo "nome" não pode ser vazio');
+      conta.nome = body.nome.trim();
+    }
+    if (body?.saldoInicial !== undefined) {
+      if (typeof body.saldoInicial !== 'number' || Number.isNaN(body.saldoInicial)) {
+        throw new BadRequestException('Campo "saldoInicial" deve ser um número');
+      }
+      conta.saldoInicial = body.saldoInicial;
+    }
+    if (body?.nota !== undefined) {
+      if (typeof body.nota !== 'string') throw new BadRequestException('Campo "nota" inválido');
+      conta.nota = body.nota;
+    }
+    if (body?.icone !== undefined) {
+      if (typeof body.icone !== 'string') throw new BadRequestException('Campo "icone" inválido');
+      conta.icone = body.icone;
+    }
+    if (body?.principal !== undefined) conta.principal = body.principal === true;
+    try {
+      const salva = await this.contas.save(conta);
+      if (salva.principal) await this.marcarPrincipal(usuarioId, salva.id);
+      return await this.contas.findOneByOrFail({ id: salva.id, usuarioId });
+    } catch (e) {
+      if (e instanceof NotFoundException) throw e;
+      throw new ConflictException('Já existe uma conta com esse nome');
+    }
+  }
+
+  /** Garante uma única conta principal por usuário. */
+  private async marcarPrincipal(usuarioId: number, id: number): Promise<void> {
+    await this.contas
+      .createQueryBuilder()
+      .update()
+      .set({ principal: false })
+      .where('usuarioId = :usuarioId AND id != :id', { usuarioId, id })
+      .execute();
+  }
+
+  async deleteConta(usuarioId: number, id: number): Promise<void> {
+    const conta = await this.contas.findOneBy({ id, usuarioId });
+    if (!conta) throw new NotFoundException('Conta não encontrada');
+    const [emReceitas, emDespesas] = await Promise.all([
+      this.receitas.countBy({ contaId: id, usuarioId }),
+      this.despesas.countBy({ contaId: id, usuarioId }),
+    ]);
+    const emUso = emReceitas + emDespesas;
+    if (emUso > 0) {
+      throw new ConflictException(
+        `Conta em uso em ${plural(emUso)} — não pode ser excluída`,
+      );
+    }
+    await this.contas.delete({ id, usuarioId });
   }
 }

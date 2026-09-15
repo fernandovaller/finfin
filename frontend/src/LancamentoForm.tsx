@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { Conta } from './api';
 
 export type TipoLancamento = 'receita' | 'despesa';
 
@@ -8,6 +9,9 @@ export interface LancamentoValues {
   categoria: string;
   origem: string;
   formaPagamento: string;
+  contaId: number | '';
+  nota: string;
+  parcelas: number;
 }
 
 interface Props {
@@ -16,6 +20,7 @@ interface Props {
   categoriasReceita: string[];
   categoriasDespesa: string[];
   formas: string[];
+  contas: Conta[];
   initial?: Partial<LancamentoValues>;
   submitLabel: string;
   submitting: boolean;
@@ -52,6 +57,7 @@ export default function LancamentoForm({
   categoriasReceita,
   categoriasDespesa,
   formas,
+  contas,
   initial,
   submitLabel,
   submitting,
@@ -59,6 +65,7 @@ export default function LancamentoForm({
   onErro,
 }: Props) {
   const opcoes = tipo === 'receita' ? categoriasReceita : categoriasDespesa;
+  const principal = contas.find((c) => c.principal);
   const [data, setData] = useState(initial?.data ?? new Date().toISOString().slice(0, 10));
   const [valor, setValor] = useState(
     initial?.valor !== undefined ? String(Math.round(initial.valor * 100)) : '',
@@ -68,7 +75,12 @@ export default function LancamentoForm({
   );
   const [origem, setOrigem] = useState(initial?.origem ?? '');
   const [formaPagamento, setFormaPagamento] = useState(initial?.formaPagamento ?? '');
+  const [contaId, setContaId] = useState<number | ''>(initial?.contaId ?? principal?.id ?? contas[0]?.id ?? '');
+  const [nota, setNota] = useState(initial?.nota ?? '');
+  const [parcelas, setParcelas] = useState(initial?.parcelas ?? 1);
   const accent = ACCENT[tipo];
+
+  const mostraParcelas = tipo === 'despesa' && !initial?.categoria;
 
   // Catálogo carrega async: form monta com opcoes=[] e categoria=''.
   // Sem sync, state fica '' mesmo após opções chegarem -> submit falha
@@ -78,6 +90,13 @@ export default function LancamentoForm({
       setCategoria(opcoes[0]);
     }
   }, [opcoes, categoria]);
+
+  // Conta carrega async: pré-seleciona principal (ou primeira) quando chegar.
+  useEffect(() => {
+    if (contaId === '' && contas.length > 0) {
+      setContaId(principal?.id ?? contas[0].id);
+    }
+  }, [contas, contaId, principal?.id]);
 
   // Preserva categoria histórica que já saiu do catálogo (ex.: renomeada).
   const opcoesCategoria =
@@ -100,7 +119,15 @@ export default function LancamentoForm({
       onErro('Escolha uma categoria (cadastre em Categorias se precisar).');
       return;
     }
-    onSubmit({ data, valor: valorNum, categoria, origem, formaPagamento });
+    if (contaId === '') {
+      onErro('Escolha a conta do lançamento (cadastre em Contas se precisar).');
+      return;
+    }
+    if (mostraParcelas && (!Number.isInteger(parcelas) || parcelas < 1 || parcelas > 21)) {
+      onErro('Parcelas deve ser de 1 a 21.');
+      return;
+    }
+    onSubmit({ data, valor: valorNum, categoria, origem, formaPagamento, contaId, nota, parcelas: mostraParcelas ? parcelas : 1 });
   }
 
   return (
@@ -126,6 +153,22 @@ export default function LancamentoForm({
         </div>
       )}
       <form onSubmit={enviar} className="mt-4 space-y-3">
+        <label className="block text-sm font-medium text-slate-600">
+          Conta
+          <select
+            value={contaId}
+            onChange={(e) => setContaId(e.target.value === '' ? '' : Number(e.target.value))}
+            required
+            className={`mt-1 ${inputBase} bg-white ${accent.focus}`}
+          >
+            {contas.length === 0 && <option value="">Nenhuma conta cadastrada</option>}
+            {contas.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.icone ? `${c.icone} ` : ''}{c.nome}{c.principal ? ' ★' : ''}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="block text-sm font-medium text-slate-600">
             Data
@@ -196,6 +239,37 @@ export default function LancamentoForm({
             ))}
           </select>
         </label>
+        <label className="block text-sm font-medium text-slate-600">
+          Nota
+          <input
+            value={nota}
+            onChange={(e) => setNota(e.target.value)}
+            placeholder="Observação opcional"
+            className={`mt-1 ${inputBase} ${accent.focus}`}
+          />
+        </label>
+        {mostraParcelas && (
+          <label className="block text-sm font-medium text-slate-600">
+            Parcelas
+            <input
+              type="number"
+              min={1}
+              max={21}
+              value={parcelas}
+              onChange={(e) => setParcelas(Number(e.target.value))}
+              className={`mt-1 ${inputBase} ${accent.focus}`}
+            />
+            {parcelas > 1 && (
+              <p className="mt-1 text-xs text-slate-400">
+                Serão criadas {parcelas} despesas mensais de{' '}
+                {((Number(valor) / 100 || 0) / parcelas).toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                })}
+              </p>
+            )}
+          </label>
+        )}
         <button
           type="submit"
           disabled={submitting}

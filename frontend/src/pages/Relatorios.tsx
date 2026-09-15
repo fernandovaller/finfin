@@ -27,7 +27,8 @@ export default function Relatorios() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
   const [sincronizadoEm, setSincronizadoEm] = useState<Date | null>(null);
-  const { corDe } = useCatalogo();
+  const { corDe, contas, contaPorId } = useCatalogo();
+  const [contaFiltro, setContaFiltro] = useState<number | ''>('');
 
   useEffect(() => {
     let ativo = true;
@@ -47,8 +48,8 @@ export default function Relatorios() {
     };
   }, []);
 
-  const recMes = useMemo(() => receitas.filter((r) => r.data.startsWith(mes)), [receitas, mes]);
-  const desMes = useMemo(() => despesas.filter((d) => d.data.startsWith(mes)), [despesas, mes]);
+  const recMes = useMemo(() => receitas.filter((r) => r.data.startsWith(mes) && (contaFiltro === '' || r.contaId === contaFiltro)), [receitas, mes, contaFiltro]);
+  const desMes = useMemo(() => despesas.filter((d) => d.data.startsWith(mes) && (contaFiltro === '' || d.contaId === contaFiltro)), [despesas, mes, contaFiltro]);
   const totalRec = recMes.reduce((s, r) => s + r.valor, 0);
   const totalDes = desMes.reduce((s, d) => s + d.valor, 0);
 
@@ -71,18 +72,49 @@ export default function Relatorios() {
   const ultimosMeses = useMemo(() => {
     const meses: string[] = [];
     for (let i = 5; i >= 0; i--) meses.push(deslocarMes(mes, -i));
+    const f = (id: number | null) => contaFiltro === '' || id === contaFiltro;
     return meses.map((m) => ({
       mes: m,
-      rec: receitas.filter((r) => r.data.startsWith(m)).reduce((s, r) => s + r.valor, 0),
-      des: despesas.filter((d) => d.data.startsWith(m)).reduce((s, d) => s + d.valor, 0),
+      rec: receitas.filter((r) => r.data.startsWith(m) && f(r.contaId)).reduce((s, r) => s + r.valor, 0),
+      des: despesas.filter((d) => d.data.startsWith(m) && f(d.contaId)).reduce((s, d) => s + d.valor, 0),
     }));
-  }, [receitas, despesas, mes]);
+  }, [receitas, despesas, mes, contaFiltro]);
+
+  const porConta = useMemo(() => {
+    const mapa = new Map<string, { rec: number; des: number }>();
+    for (const r of recMes) {
+      const nome = contaPorId(r.contaId) || 'Sem conta';
+      const atual = mapa.get(nome) ?? { rec: 0, des: 0 };
+      mapa.set(nome, { ...atual, rec: atual.rec + r.valor });
+    }
+    for (const d of desMes) {
+      const nome = contaPorId(d.contaId) || 'Sem conta';
+      const atual = mapa.get(nome) ?? { rec: 0, des: 0 };
+      mapa.set(nome, { ...atual, des: atual.des + d.valor });
+    }
+    return [...mapa.entries()].sort((a, b) => (b[1].rec - b[1].des) - (a[1].rec - a[1].des));
+  }, [recMes, desMes, contaPorId]);
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold tracking-tight">Relatórios</h1>
-        <MesNav mes={mes} onChange={setMes} />
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={contaFiltro}
+            onChange={(e) => setContaFiltro(e.target.value === '' ? '' : Number(e.target.value))}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none"
+            aria-label="Filtrar por conta"
+          >
+            <option value="">Todas as contas</option>
+            {contas.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.icone ? `${c.icone} ` : ''}{c.nome}
+              </option>
+            ))}
+          </select>
+          <MesNav mes={mes} onChange={setMes} />
+        </div>
       </div>
 
       <AlertaErro mensagem={erro} />
@@ -143,7 +175,7 @@ export default function Relatorios() {
           aria-label="Despesas por forma de pagamento"
           className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"
         >
-          <h2 className="text-base font-bold">Despesas por pagamento</h2>
+          <h2 className="text-base font-bold">Por cartão / pagamento</h2>
           {porForma.length === 0 ? (
             <p className="mt-3 rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
               Sem despesas neste mês.
@@ -164,6 +196,41 @@ export default function Relatorios() {
           )}
         </section>
       </div>
+
+      <section
+        aria-label="Saldo por conta"
+        className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200"
+      >
+        <h2 className="px-5 pt-5 text-base font-bold">Por conta · {mesLabel(mes)}</h2>
+        <div className="overflow-x-auto p-5 pt-3">
+          {porConta.length === 0 ? (
+            <p className="rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+              Sem movimentos neste mês.
+            </p>
+          ) : (
+            <table className="w-full min-w-[480px] text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
+                  <th className="pb-2 font-semibold">Conta</th>
+                  <th className="pb-2 text-right font-semibold">Receitas</th>
+                  <th className="pb-2 text-right font-semibold">Despesas</th>
+                  <th className="pb-2 text-right font-semibold">Saldo</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {porConta.map(([nome, { rec, des }]) => (
+                  <tr key={nome}>
+                    <td className="py-2 pr-4 font-medium">{nome}</td>
+                    <td className="py-2 text-right tabular-nums text-emerald-600">{BRL.format(rec)}</td>
+                    <td className="py-2 text-right tabular-nums text-rose-600">{BRL.format(des)}</td>
+                    <td className="py-2 text-right tabular-nums text-slate-800">{BRL.format(rec - des)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </section>
 
       <section
         aria-label="Últimos 6 meses"

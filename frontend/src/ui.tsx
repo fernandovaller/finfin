@@ -136,6 +136,66 @@ export const IconeLixeira = ({ className }: { className: string }) => (
   </Svg>
 );
 
+export const IconeUsuario = ({ className }: { className: string }) => (
+  <Svg className={className}>
+    <path
+      d="M19 21v-2a4 4 0 00-4-4H9a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+/* ---------- avatar (foto ou iniciais) ---------- */
+
+const AVATAR_CORES = [
+  'bg-emerald-600',
+  'bg-sky-600',
+  'bg-violet-600',
+  'bg-amber-600',
+  'bg-pink-600',
+  'bg-teal-600',
+  'bg-rose-600',
+  'bg-slate-600',
+];
+
+export function iniciais(nome: string): string {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return '?';
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+}
+
+export function corAvatar(nome: string): string {
+  let h = 0;
+  for (const c of nome) h = (h * 31 + c.codePointAt(0)!) >>> 0;
+  return AVATAR_CORES[h % AVATAR_CORES.length];
+}
+
+export function Avatar({
+  nome,
+  avatar,
+  tamanho = 'md',
+}: {
+  nome: string;
+  avatar?: string | null;
+  tamanho?: 'sm' | 'md' | 'lg';
+}) {
+  const tam = tamanho === 'lg' ? 'h-20 w-20 text-2xl' : tamanho === 'sm' ? 'h-8 w-8 text-xs' : 'h-11 w-11 text-sm';
+  if (avatar) {
+    return <img src={avatar} alt={`Foto de ${nome}`} className={`${tam} rounded-full object-cover ring-2 ring-white/20`} />;
+  }
+  return (
+    <div
+      aria-hidden={!nome}
+      title={nome}
+      className={`${tam} flex shrink-0 items-center justify-center rounded-full font-bold text-white ${corAvatar(nome)}`}
+    >
+      {iniciais(nome)}
+    </div>
+  );
+}
+
 /* ---------- componentes compartilhados ---------- */
 
 export function MesNav({ mes, onChange }: { mes: string; onChange: (m: string) => void }) {

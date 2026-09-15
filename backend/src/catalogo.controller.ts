@@ -1,49 +1,72 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { AuthGuard } from './auth.guard';
 import { CatalogoService } from './catalogo.service';
 
 @Controller()
+@UseGuards(AuthGuard)
 export class CatalogoController {
   constructor(private readonly catalogo: CatalogoService) {}
 
   @Get('categorias')
-  listCategorias(@Query('tipo') tipo?: string) {
-    return this.catalogo.listCategorias(tipo);
+  listCategorias(@Req() req: any, @Query('tipo') tipo?: string) {
+    return this.catalogo.listCategorias(req.usuario.id, tipo);
   }
 
   @Post('categorias')
-  createCategoria(@Body() body: any) {
-    return this.catalogo.createCategoria(body);
+  createCategoria(@Req() req: any, @Body() body: any) {
+    return this.catalogo.createCategoria(req.usuario.id, body);
   }
 
   @Put('categorias/:id')
-  updateCategoria(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
-    return this.catalogo.updateCategoria(id, body);
+  updateCategoria(@Req() req: any, @Param('id', ParseIntPipe) id: number, @Body() body: any) {
+    return this.catalogo.updateCategoria(req.usuario.id, id, body);
   }
 
   @Delete('categorias/:id')
   @HttpCode(204)
-  deleteCategoria(@Param('id', ParseIntPipe) id: number) {
-    return this.catalogo.deleteCategoria(id);
+  deleteCategoria(@Req() req: any, @Param('id', ParseIntPipe) id: number) {
+    return this.catalogo.deleteCategoria(req.usuario.id, id);
   }
 
   @Get('formas-pagamento')
-  listFormas() {
-    return this.catalogo.listFormas();
+  listFormas(@Req() req: any) {
+    return this.catalogo.listFormas(req.usuario.id);
   }
 
   @Post('formas-pagamento')
-  createForma(@Body() body: any) {
-    return this.catalogo.createForma(body);
+  createForma(@Req() req: any, @Body() body: any) {
+    return this.catalogo.createForma(req.usuario.id, body);
   }
 
   @Put('formas-pagamento/:id')
-  updateForma(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
-    return this.catalogo.updateForma(id, body);
+  updateForma(@Req() req: any, @Param('id', ParseIntPipe) id: number, @Body() body: any) {
+    return this.catalogo.updateForma(req.usuario.id, id, body);
   }
 
   @Delete('formas-pagamento/:id')
   @HttpCode(204)
-  deleteForma(@Param('id', ParseIntPipe) id: number) {
-    return this.catalogo.deleteForma(id);
+  deleteForma(@Req() req: any, @Param('id', ParseIntPipe) id: number) {
+    return this.catalogo.deleteForma(req.usuario.id, id);
+  }
+
+  @Get('contas')
+  listContas(@Req() req: any) {
+    return this.catalogo.listContas(req.usuario.id);
+  }
+
+  @Post('contas')
+  createConta(@Req() req: any, @Body() body: any) {
+    return this.catalogo.createConta(req.usuario.id, body);
+  }
+
+  @Put('contas/:id')
+  updateConta(@Req() req: any, @Param('id', ParseIntPipe) id: number, @Body() body: any) {
+    return this.catalogo.updateConta(req.usuario.id, id, body);
+  }
+
+  @Delete('contas/:id')
+  @HttpCode(204)
+  deleteConta(@Req() req: any, @Param('id', ParseIntPipe) id: number) {
+    return this.catalogo.deleteConta(req.usuario.id, id);
   }
 }

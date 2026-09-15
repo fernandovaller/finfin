@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useAuth } from './auth';
 import {
+  Avatar,
   IconeCarteira,
   IconeCasa,
   IconeExtrato,
   IconeGrafico,
   IconeTag,
+  IconeUsuario,
 } from './ui';
 
 const ITENS = [
@@ -13,7 +16,9 @@ const ITENS = [
   { to: '/lancamentos', label: 'Lançamentos', Icon: IconeExtrato },
   { to: '/relatorios', label: 'Relatórios', Icon: IconeGrafico },
   { to: '/categorias', label: 'Categorias', Icon: IconeTag },
+  { to: '/contas', label: 'Contas', Icon: IconeCarteira },
   { to: '/formas-pagamento', label: 'Formas de pagamento', Icon: IconeCarteira },
+  { to: '/perfil', label: 'Perfil', Icon: IconeUsuario },
 ];
 
 function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
@@ -50,6 +55,13 @@ function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
 
 export default function Layout() {
   const [aberto, setAberto] = useState(false);
+  const { usuario, sair } = useAuth();
+  const navegar = useNavigate();
+
+  async function onSair() {
+    await sair();
+    navegar('/login', { replace: true });
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-900 antialiased">
@@ -65,7 +77,26 @@ export default function Layout() {
           </div>
         </div>
         <Navegacao />
-        <p className="mt-auto px-5 pb-5 text-xs text-slate-500">FinFin · controle financeiro</p>
+        <div className="mt-auto space-y-3 px-5 pb-5">
+          {usuario && (
+            <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-800 px-3 py-2">
+              <Link to="/perfil" className="flex min-w-0 flex-1 items-center gap-2 rounded-lg">
+                <Avatar nome={usuario.nome} avatar={usuario.avatar} tamanho="sm" />
+                <p className="min-w-0 truncate text-xs font-semibold text-slate-200" title={usuario.email}>
+                  {usuario.nome}
+                </p>
+              </Link>
+              <button
+                type="button"
+                onClick={onSair}
+                className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-slate-400 transition hover:bg-slate-700 hover:text-white"
+              >
+                Sair
+              </button>
+            </div>
+          )}
+          <p className="text-xs text-slate-500">FinFin · controle financeiro</p>
+        </div>
       </aside>
 
       {/* Drawer mobile */}
@@ -90,6 +121,25 @@ export default function Layout() {
               </button>
             </div>
             <Navegacao onNavegar={() => setAberto(false)} />
+            {usuario && (
+              <div className="mt-auto space-y-3 px-5 pb-5">
+                <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-800 px-3 py-2">
+                  <Link to="/perfil" onClick={() => setAberto(false)} className="flex min-w-0 flex-1 items-center gap-2 rounded-lg">
+                    <Avatar nome={usuario.nome} avatar={usuario.avatar} tamanho="sm" />
+                    <p className="min-w-0 truncate text-xs font-semibold text-slate-200" title={usuario.email}>
+                      {usuario.nome}
+                    </p>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={onSair}
+                    className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-slate-400 transition hover:bg-slate-700 hover:text-white"
+                  >
+                    Sair
+                  </button>
+                </div>
+              </div>
+            )}
           </aside>
         </div>
       )}
