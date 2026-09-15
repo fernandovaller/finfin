@@ -5,6 +5,7 @@ export class Sessao {
   @PrimaryColumn()
   token: string;
 
+  /** Dono da sessão (FK ON DELETE CASCADE: a sessão morre junto com o usuário). */
   @Column()
   usuarioId: number;
 

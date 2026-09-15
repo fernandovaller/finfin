@@ -20,7 +20,7 @@ export class Despesa {
   @Column({ default: '' })
   formaPagamento: string;
 
-  /** Conta dona do lançamento. Obrigatório (sem FK rígida; validado no service). */
+  /** Conta dona do lançamento. FK no banco; o service valida o dono (409 se conta em uso). */
   @Column({ type: 'integer', nullable: true })
   contaId: number | null;
 
@@ -41,7 +41,7 @@ export class Despesa {
   @Column({ type: 'integer', nullable: true })
   parcelaTotal: number | null;
 
-  /** Dono do lançamento. Nullable para preservar base anterior ao login. */
+  /** Dono do lançamento (FK no banco). Nullable para preservar base anterior ao login. */
   @Column({ type: 'integer', nullable: true })
   usuarioId: number | null;
 }

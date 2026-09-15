@@ -57,58 +57,6 @@ export class CatalogoService {
     private readonly contas: Repository<Conta>,
   ) {}
 
-  /** Boot: remove UNIQUE legado global + colunas legadas da forma (tipo/contaId). */
-  async onModuleInit(): Promise<void> {
-    await this.migrarUnicosPorUsuario();
-    await this.removerColunasLegadasForma();
-  }
-
-  /**
-   * Bases criadas antes do login têm `UNIQUE("nome")` em formas_pagamento e
-   * contas; o synchronize adiciona o UNIQUE composto mas não remove o antigo,
-   * o que impediria dois usuários de terem itens com o mesmo nome.
-   * SQLite não tem DROP CONSTRAINT — recria a tabela preservando os dados,
-   * mantendo os nomes de constraint que o TypeORM espera.
-   */
-  private async migrarUnicosPorUsuario(): Promise<void> {
-    const defs: Array<{ name: string; sql: string }> = await this.categorias.query(
-      `SELECT name, sql FROM sqlite_master WHERE type = 'table' AND name IN ('formas_pagamento', 'contas')`,
-    );
-    for (const def of defs) {
-      if (def.sql.includes('UNIQUE ("nome")')) {
-        await this.recriarSemUnicoLegado(def.name);
-      }
-    }
-  }
-
-  private async recriarSemUnicoLegado(tabela: string): Promise<void> {
-    const nova =
-      tabela === 'formas_pagamento'
-        ? `"id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "nome" varchar NOT NULL, "usuarioId" integer, CONSTRAINT "UQ_8637523d58034a1c88909aee767" UNIQUE ("usuarioId", "nome")`
-        : `"id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "nome" varchar NOT NULL, "saldoInicial" real NOT NULL DEFAULT (0), "nota" varchar NOT NULL DEFAULT (''), "icone" varchar NOT NULL DEFAULT (''), "principal" boolean NOT NULL DEFAULT (0), "usuarioId" integer, CONSTRAINT "UQ_5ba40a12dad67be3db12892b719" UNIQUE ("usuarioId", "nome")`;
-    const cols =
-      tabela === 'formas_pagamento' ? '"id", "nome", "usuarioId"' : '"id", "nome", "saldoInicial", "usuarioId"';
-    await this.categorias.query(`CREATE TABLE "${tabela}_nova" (${nova})`);
-    await this.categorias.query(
-      `INSERT INTO "${tabela}_nova" (${cols}) SELECT ${cols} FROM "${tabela}"`,
-    );
-    await this.categorias.query(`DROP TABLE "${tabela}"`);
-    await this.categorias.query(`ALTER TABLE "${tabela}_nova" RENAME TO "${tabela}"`);
-  }
-
-  /** Forma agora é texto simples: derruba colunas legadas tipo/contaId se existirem. */
-  private async removerColunasLegadasForma(): Promise<void> {
-    const cols: Array<{ name: string }> = await this.categorias.query(
-      `PRAGMA table_info('formas_pagamento')`,
-    );
-    const nomes = new Set(cols.map((c) => c.name));
-    for (const legada of ['tipo', 'contaId']) {
-      if (nomes.has(legada)) {
-        await this.categorias.query(`ALTER TABLE "formas_pagamento" DROP COLUMN "${legada}"`);
-      }
-    }
-  }
-
   listCategorias(usuarioId: number, tipo?: string): Promise<Categoria[]> {
     const where =
       tipo === 'receita' || tipo === 'despesa'

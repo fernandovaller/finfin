@@ -115,9 +115,9 @@ export default function Login() {
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 required
-                minLength={modo === 'criar' ? 6 : 1}
+                minLength={modo === 'criar' ? 8 : 1}
                 autoComplete={modo === 'criar' ? 'new-password' : 'current-password'}
-                placeholder={modo === 'criar' ? 'Mínimo 6 caracteres' : 'Sua senha'}
+                placeholder={modo === 'criar' ? 'Mínimo 8 caracteres' : 'Sua senha'}
                 className="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
               />
             </label>

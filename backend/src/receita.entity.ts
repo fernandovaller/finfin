@@ -20,7 +20,7 @@ export class Receita {
   @Column({ default: '' })
   formaPagamento: string;
 
-  /** Conta dona do lançamento. Obrigatório (sem FK rígida; validado no service). */
+  /** Conta dona do lançamento. FK no banco; o service valida o dono (409 se conta em uso). */
   @Column({ type: 'integer', nullable: true })
   contaId: number | null;
 
@@ -31,7 +31,7 @@ export class Receita {
   @Column({ type: 'varchar', nullable: true })
   fitid: string | null;
 
-  /** Dono do lançamento. Nullable para preservar base anterior ao login. */
+  /** Dono do lançamento (FK no banco). Nullable para preservar base anterior ao login. */
   @Column({ type: 'integer', nullable: true })
   usuarioId: number | null;
 }

@@ -116,8 +116,9 @@ export class AuthService {
       throw new BadRequestException('Campo "email" inválido');
     }
     const senha = body?.senha;
-    if (typeof senha !== 'string' || senha.length < 6) {
-      throw new BadRequestException('Campo "senha" deve ter ao menos 6 caracteres');
+    // Mínimo 8 (evita senhas triviais); máximo 128 (evita scrypt lento com senha gigante).
+    if (typeof senha !== 'string' || senha.length < 8 || senha.length > 128) {
+      throw new BadRequestException('Campo "senha" deve ter de 8 a 128 caracteres');
     }
     if (await this.usuarios.findOneBy({ email })) {
       throw new ConflictException('Este e-mail já está cadastrado');
@@ -199,8 +200,8 @@ export class AuthService {
     if (typeof atual !== 'string' || !(await confereSenha(atual, usuario.senhaHash))) {
       throw new UnauthorizedException('Senha atual incorreta');
     }
-    if (typeof nova !== 'string' || nova.length < 6) {
-      throw new BadRequestException('A nova senha deve ter ao menos 6 caracteres');
+    if (typeof nova !== 'string' || nova.length < 8 || nova.length > 128) {
+      throw new BadRequestException('A nova senha deve ter de 8 a 128 caracteres');
     }
     usuario.senhaHash = await hashSenha(nova);
     const salvo = await this.usuarios.save(usuario);

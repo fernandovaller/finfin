@@ -10,7 +10,7 @@ export class FormaPagamento {
   @Column()
   nome: string;
 
-  /** Dono do item de catálogo. */
+  /** Dono do item de catálogo (FK no banco). Nullable preserva base anterior ao login. */
   @Column({ type: 'integer', nullable: true })
   usuarioId: number | null;
 }

@@ -22,7 +22,7 @@ export class Conta {
   @Column({ default: false })
   principal: boolean;
 
-  /** Dono da conta. */
+  /** Dono da conta (FK no banco). Nullable preserva base anterior ao login. */
   @Column({ type: 'integer', nullable: true })
   usuarioId: number | null;
 }

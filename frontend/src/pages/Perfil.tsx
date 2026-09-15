@@ -151,7 +151,7 @@ export default function Perfil() {
           </label>
           <label className="block">
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Nova senha</span>
-            <input type="password" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} required minLength={6} autoComplete="new-password" placeholder="Mínimo 6 caracteres" className={campo} />
+            <input type="password" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} required minLength={8} autoComplete="new-password" placeholder="Mínimo 8 caracteres" className={campo} />
           </label>
           <label className="block">
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Confirmar nova senha</span>

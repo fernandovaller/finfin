@@ -16,6 +16,7 @@ import { FormaPagamento } from './forma-pagamento.entity';
 import { Receita } from './receita.entity';
 import { Sessao } from './sessao.entity';
 import { Usuario } from './usuario.entity';
+import { CriacaoInicial1789505184849 } from './migrations/1789505184849-criacao-inicial';
 
 @Module({
   imports: [
@@ -23,7 +24,9 @@ import { Usuario } from './usuario.entity';
       type: 'better-sqlite3',
       database: 'data/finfin.sqlite',
       entities: [Receita, Despesa, Categoria, FormaPagamento, Conta, Usuario, Sessao],
-      synchronize: true, // dev: cria/atualiza tabelas automaticamente (trocar por migrations em produção)
+      // As migrations são o único dono do schema — nunca reativar `synchronize`.
+      migrations: [CriacaoInicial1789505184849],
+      migrationsRun: true, // aplica migrations pendentes no boot (banco novo ou existente)
     }),
     TypeOrmModule.forFeature([Receita, Despesa, Categoria, FormaPagamento, Conta, Usuario, Sessao]),
   ],
