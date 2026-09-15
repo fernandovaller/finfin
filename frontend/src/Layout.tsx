@@ -90,8 +90,8 @@ export default function Layout() {
       {/* Sidebar desktop */}
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col bg-slate-900 lg:flex">
         <div className="flex items-center gap-3 px-5 pb-6 pt-6">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-xl font-black shadow-lg shadow-emerald-950/40">
-            F
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white p-1 shadow-lg shadow-slate-950/40">
+            <img src="/favicon-96x96.png" alt="Logotipo FinFin" className="h-full w-full object-contain" />
           </div>
           <div>
             <p className="text-lg font-bold tracking-tight text-white">FinFin</p>
@@ -128,8 +128,8 @@ export default function Layout() {
           <aside className="absolute inset-y-0 left-0 flex w-64 flex-col bg-slate-900 shadow-xl">
             <div className="flex items-center justify-between px-5 pb-6 pt-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-xl font-black">
-                  F
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white p-1">
+                  <img src="/favicon-96x96.png" alt="Logotipo FinFin" className="h-full w-full object-contain" />
                 </div>
                 <p className="text-lg font-bold tracking-tight text-white">FinFin</p>
               </div>

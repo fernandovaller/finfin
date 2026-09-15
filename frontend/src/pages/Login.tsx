@@ -37,8 +37,8 @@ export default function Login() {
     <main className="flex min-h-screen items-center justify-center bg-slate-900 px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-xl font-black text-white shadow-lg shadow-emerald-950/40">
-            F
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white p-1 shadow-lg shadow-slate-950/40">
+            <img src="/favicon-96x96.png" alt="Logotipo FinFin" className="h-full w-full object-contain" />
           </div>
           <div>
             <p className="text-xl font-bold tracking-tight text-white">FinFin</p>
