@@ -59,4 +59,29 @@ export class AppController {
     const cid = contaId !== undefined && contaId !== '' ? Number(contaId) : undefined;
     return this.appService.resumo(req.usuario.id, mes, cid);
   }
+
+  @Get('contagem')
+  contagem(@Req() req: any) {
+    return this.appService.contagem(req.usuario.id);
+  }
+
+  @Get('exportar')
+  exportar(@Req() req: any) {
+    return this.appService.exportar(req.usuario.id);
+  }
+
+  @Get('exportar/csv')
+  exportarCsv(@Req() req: any, @Query('tipo') tipo?: string) {
+    return this.appService.exportarCsv(req.usuario.id, tipo ?? '');
+  }
+
+  @Delete('dados/lancamentos')
+  apagarLancamentos(@Req() req: any) {
+    return this.appService.apagarLancamentos(req.usuario.id);
+  }
+
+  @Delete('dados/tudo')
+  apagarTudo(@Req() req: any) {
+    return this.appService.apagarTudo(req.usuario.id);
+  }
 }

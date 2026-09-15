@@ -5,6 +5,7 @@ import {
   Avatar,
   IconeCarteira,
   IconeCasa,
+  IconeEngrenagem,
   IconeExtrato,
   IconeGrafico,
   IconeTag,
@@ -27,6 +28,10 @@ const GRUPOS = [
       { to: '/contas', label: 'Contas', Icon: IconeCarteira },
       { to: '/formas-pagamento', label: 'Formas de pagamento', Icon: IconeCarteira },
     ],
+  },
+  {
+    rotulo: 'Sistema',
+    itens: [{ to: '/configuracoes', label: 'Configurações', Icon: IconeEngrenagem }],
   },
 ];
 

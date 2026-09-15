@@ -293,4 +293,26 @@ export class CatalogoService {
     }
     await this.contas.delete({ id, usuarioId });
   }
+
+  /**
+   * Restaura itens padrão do catálogo que faltam (ex.: após exclusões),
+   * sem duplicar o que já existe.
+   */
+  async restaurarPadrao(usuarioId: number): Promise<{ categorias: number; formas: number }> {
+    const [cats, formas] = await Promise.all([
+      this.categorias.findBy({ usuarioId }),
+      this.formas.findBy({ usuarioId }),
+    ]);
+    const temCat = new Set(cats.map((c) => `${c.tipo}:${c.nome}`));
+    const novasCats = SEED_CATEGORIAS.filter((s) => !temCat.has(`${s.tipo}:${s.nome}`));
+    const temForma = new Set(formas.map((f) => f.nome));
+    const novasFormas = SEED_FORMAS.filter((nome) => !temForma.has(nome));
+    if (novasCats.length > 0) {
+      await this.categorias.save(novasCats.map((c) => ({ ...c, usuarioId })));
+    }
+    if (novasFormas.length > 0) {
+      await this.formas.save(novasFormas.map((nome) => ({ nome, usuarioId })));
+    }
+    return { categorias: novasCats.length, formas: novasFormas.length };
+  }
 }

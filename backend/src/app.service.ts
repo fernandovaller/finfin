@@ -2,8 +2,10 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { Repository } from 'typeorm';
+import { Categoria } from './categoria.entity';
 import { Conta } from './conta.entity';
 import { Despesa } from './despesa.entity';
+import { FormaPagamento } from './forma-pagamento.entity';
 import { Receita } from './receita.entity';
 
 function assertLancamento(body: any, campos: string[]): void {
@@ -42,6 +44,10 @@ export class AppService {
     private readonly despesas: Repository<Despesa>,
     @InjectRepository(Conta)
     private readonly contas: Repository<Conta>,
+    @InjectRepository(Categoria)
+    private readonly categorias: Repository<Categoria>,
+    @InjectRepository(FormaPagamento)
+    private readonly formas: Repository<FormaPagamento>,
   ) {}
 
   /** Todo lançamento pertence a uma conta do próprio usuário. */
@@ -205,5 +211,93 @@ export class AppService {
       .filter((d) => d.data.startsWith(ref))
       .reduce((s, d) => s + d.valor, 0);
     return { mes: ref, totalReceitas, totalDespesas, saldo: totalReceitas - totalDespesas };
+  }
+
+  /** Contagem de itens por coleção — alimenta a página de Configurações. */
+  async contagem(usuarioId: number): Promise<{
+    contas: number;
+    receitas: number;
+    despesas: number;
+    categorias: number;
+    formasPagamento: number;
+  }> {
+    const [contas, receitas, despesas, categorias, formasPagamento] = await Promise.all([
+      this.contas.countBy({ usuarioId }),
+      this.receitas.countBy({ usuarioId }),
+      this.despesas.countBy({ usuarioId }),
+      this.categorias.countBy({ usuarioId }),
+      this.formas.countBy({ usuarioId }),
+    ]);
+    return { contas, receitas, despesas, categorias, formasPagamento };
+  }
+
+  /** Exporta tudo do usuário em JSON (contas, lançamentos e catálogo). */
+  async exportar(usuarioId: number): Promise<Record<string, unknown>> {
+    const [contas, receitas, despesas, categorias, formasPagamento] = await Promise.all([
+      this.contas.find({ where: { usuarioId }, order: { id: 'ASC' } }),
+      this.receitas.find({ where: { usuarioId }, order: { id: 'ASC' } }),
+      this.despesas.find({ where: { usuarioId }, order: { id: 'ASC' } }),
+      this.categorias.find({ where: { usuarioId }, order: { id: 'ASC' } }),
+      this.formas.find({ where: { usuarioId }, order: { id: 'ASC' } }),
+    ]);
+    return {
+      app: 'finfin',
+      versao: 1,
+      exportadoEm: new Date().toISOString(),
+      contas,
+      receitas,
+      despesas,
+      categorias,
+      formasPagamento,
+    };
+  }
+
+  /** Exporta receitas ou despesas em CSV (valores com ponto, datas ISO). */
+  async exportarCsv(
+    usuarioId: number,
+    tipo: string,
+  ): Promise<{ filename: string; csv: string }> {
+    const esc = (v: unknown): string => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const linha = (cols: unknown[]): string => cols.map(esc).join(';');
+    if (tipo === 'receitas') {
+      const itens = await this.receitas.find({ where: { usuarioId }, order: { id: 'ASC' } });
+      const csv = [
+        linha(['id', 'data', 'valor', 'categoria', 'origem', 'formaPagamento', 'contaId', 'nota']),
+        ...itens.map((r) =>
+          linha([r.id, r.data, r.valor, r.categoria, r.origem, r.formaPagamento, r.contaId, r.nota]),
+        ),
+      ].join('\n');
+      return { filename: 'finfin-receitas.csv', csv };
+    }
+    if (tipo === 'despesas') {
+      const itens = await this.despesas.find({ where: { usuarioId }, order: { id: 'ASC' } });
+      const csv = [
+        linha(['id', 'data', 'valor', 'categoria', 'descricao', 'formaPagamento', 'contaId', 'nota', 'grupoParcela', 'parcelaAtual', 'parcelaTotal']),
+        ...itens.map((d) =>
+          linha([d.id, d.data, d.valor, d.categoria, d.descricao, d.formaPagamento, d.contaId, d.nota, d.grupoParcela, d.parcelaAtual, d.parcelaTotal]),
+        ),
+      ].join('\n');
+      return { filename: 'finfin-despesas.csv', csv };
+    }
+    throw new BadRequestException('Campo "tipo" deve ser "receitas" ou "despesas"');
+  }
+
+  /** Apaga todos os lançamentos do usuário, mantendo contas e catálogo. */
+  async apagarLancamentos(usuarioId: number): Promise<{ receitas: number; despesas: number }> {
+    const [r, d] = await Promise.all([
+      this.receitas.delete({ usuarioId }),
+      this.despesas.delete({ usuarioId }),
+    ]);
+    return { receitas: r.affected ?? 0, despesas: d.affected ?? 0 };
+  }
+
+  /** Apaga lançamentos + contas do usuário, mantendo catálogo e perfil. */
+  async apagarTudo(usuarioId: number): Promise<{ receitas: number; despesas: number; contas: number }> {
+    const lanc = await this.apagarLancamentos(usuarioId);
+    const c = await this.contas.delete({ usuarioId });
+    return { ...lanc, contas: c.affected ?? 0 };
   }
 }

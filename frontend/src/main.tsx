@@ -4,6 +4,7 @@ import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth';
 import Layout from './Layout';
 import Categorias from './pages/Categorias';
+import Configuracoes from './pages/Configuracoes';
 import Contas from './pages/Contas';
 import FormasPagamento from './pages/FormasPagamento';
 import Home from './pages/Home';
@@ -44,6 +45,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="relatorios" element={<Relatorios />} />
             <Route path="categorias" element={<Categorias />} />
             <Route path="contas" element={<Contas />} />
+            <Route path="configuracoes" element={<Configuracoes />} />
             <Route path="formas-pagamento" element={<FormasPagamento />} />
             <Route path="perfil" element={<Perfil />} />
             <Route path="*" element={<Navigate to="/" replace />} />

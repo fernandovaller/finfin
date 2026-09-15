@@ -69,4 +69,9 @@ export class CatalogoController {
   deleteConta(@Req() req: any, @Param('id', ParseIntPipe) id: number) {
     return this.catalogo.deleteConta(req.usuario.id, id);
   }
+
+  @Post('restaurar')
+  restaurarPadrao(@Req() req: any) {
+    return this.catalogo.restaurarPadrao(req.usuario.id);
+  }
 }
