@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export type TipoLancamento = 'receita' | 'despesa';
 
@@ -69,6 +69,15 @@ export default function LancamentoForm({
   const [origem, setOrigem] = useState(initial?.origem ?? '');
   const [formaPagamento, setFormaPagamento] = useState(initial?.formaPagamento ?? '');
   const accent = ACCENT[tipo];
+
+  // Catálogo carrega async: form monta com opcoes=[] e categoria=''.
+  // Sem sync, state fica '' mesmo após opções chegarem -> submit falha
+  // com "Escolha uma categoria" embora select mostre primeira opção.
+  useEffect(() => {
+    if (!categoria && opcoes.length > 0) {
+      setCategoria(opcoes[0]);
+    }
+  }, [opcoes, categoria]);
 
   // Preserva categoria histórica que já saiu do catálogo (ex.: renomeada).
   const opcoesCategoria =
