@@ -41,6 +41,31 @@ Abra http://localhost:3000 no navegador.
 
 As chamadas do frontend usam `/api/...`, com proxy do Vite para o backend em dev.
 
+## Como rodar com Docker
+
+Pré-requisito: Docker 24+ com plugin Compose (`docker compose version`).
+
+```sh
+docker compose up --build   # sobe backend (:3001) + frontend (:3000)
+```
+
+Abra http://localhost:3000 no navegador. O nginx do frontend faz proxy de
+`/api/...` para o serviço `backend`, então é a mesma origem do `npm run dev`.
+
+| Comando                          | O que faz                                  |
+| -------------------------------- | ------------------------------------------ |
+| `docker compose up --build`      | constrói as imagens e sobe os 2 serviços   |
+| `docker compose up -d`           | sobe em segundo plano (após o 1º build)    |
+| `docker compose logs -f`         | acompanha os logs dos 2 serviços           |
+| `docker compose down`            | para e remove os contêineres (mantém dados)|
+
+Os dados do SQLite ficam no volume `finfin-data` (`/app/data` no contêiner do
+backend). Para recomeçar do zero, apague o volume:
+
+```sh
+docker compose down -v   # CUIDADO: apaga todos os lançamentos
+```
+
 ## API
 
 Base: `http://localhost:3001/api`
@@ -69,9 +94,9 @@ curl -X POST localhost:3001/api/despesas \
 
 ```
 finfin/
-├── backend/        # NestJS — controllers, services, entidades TypeORM
-│   └── data/       # finfin.sqlite (criado no boot, não versionado)
-├── frontend/       # React — Layout com sidebar, páginas, form reutilizável
+├── backend/        # NestJS — controllers, services, entidades TypeORM (+ Dockerfile)
+├── frontend/       # React — Layout com sidebar, páginas, form reutilizável (+ Dockerfile e nginx.conf)
+├── docker-compose.yml # backend (:3001) + frontend (:3000), volume finfin-data
 ├── PLAN.md         # especificação do produto (origem do projeto)
 └── package.json    # runner raiz (concurrently): dev, build, setup
 ```
