@@ -9,6 +9,9 @@ dist/
 *.sqlite
 *.sqlite-journal
 
+# Extratos bancários (podem conter dados reais)
+*.ofx
+
 # Logs
 *.log
 npm-debug.log*

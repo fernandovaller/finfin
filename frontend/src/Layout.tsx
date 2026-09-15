@@ -181,7 +181,7 @@ export default function Layout() {
         <p className="text-base font-bold tracking-tight">FinFin</p>
       </header>
 
-      <div className="lg:pl-64">
+      <div className="area-app lg:pl-64">
         <Outlet />
       </div>
     </div>

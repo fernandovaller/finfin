@@ -18,8 +18,9 @@ body {
   background-color: var(--color-slate-950);
 }
 
-/* Largura "fixa": centraliza o conteúdo das páginas em vez de fluido. */
-html[data-largura='fixa'] main {
+/* Largura "fixa": centraliza o conteúdo das páginas do app (dentro de .area-app).
+   Fora dela (ex.: /login) o `main` segue fluido em tela cheia. */
+html[data-largura='fixa'] .area-app main {
   max-width: 64rem;
   margin-inline: auto;
 }
