@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Headers, HttpCode, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthGuard } from './auth.guard';
 import { AuthService, UsuarioPublico } from './auth.service';
 
@@ -6,12 +7,15 @@ import { AuthService, UsuarioPublico } from './auth.service';
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
+  /** 10 tentativas por minuto por IP — freia força bruta e DoS de CPU via scrypt. */
   @Post('cadastro')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   cadastro(@Body() body: any) {
     return this.auth.cadastro(body);
   }
 
   @Post('login')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   login(@Body() body: any) {
     return this.auth.login(body);
   }
