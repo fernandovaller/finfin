@@ -90,3 +90,7 @@ finfin/
 - [ ] PostgreSQL para deploy
 - [ ] Testes automatizados
 - [ ] Importação de extratos (CSV/OFX)
+
+## Licença
+
+MIT — veja [LICENSE](LICENSE).

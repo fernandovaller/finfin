@@ -13,7 +13,7 @@
 | Inicial | ✅ Própria | ✅ | ⚠️ Complexo | ❌ |
 | Registro de receitas/gastos | ✅ | ✅ | ⚠️ | ✅ |
 | Alerta em cartão (auto) | ❌ | ✅ | ⚠️ | ✅ |
-| Semanal/Mensual | ✅ | ✅ | ✅ | ✅ |
+| Semanal/Mensal | ✅ | ✅ | ✅ | ✅ |
 | Dívidas + saldo cartão | ✅ | ✅ | ✅ | ✅ |
 | Integração com banco (sync) | ❌ | ❌ | ⚠️ | ✅ |
 
@@ -21,10 +21,10 @@
 
 **Stack: Google Sheets (versões Online + mobile)** — mais acessível, já em uso e expandível.
 
-### Estrutura do planilha sugerida
+### Estrutura da planilha sugerida
 
 ```
-Receitas e Gastos (mestria)
+Receitas e Gastos (principal)
 ├── Receitas
 │   └── Tabela: Data | Valor | Categoria | Origem | Semanal
 ├── Despesas
@@ -41,26 +41,26 @@ Receitas e Gastos (mestria)
 
 ### Componentes extras (opcional)
 - **Alerta em cartão:** script Python que monitora saldos diários e gera alertas via email/notificação.
-- **Semanal:** calendário de revisão; cron job para importar dados mensais.
+- **Revisão semanal:** calendário de revisão; cron job para importar dados mensais.
 
 ---
 
-## 3. Phases de Implementação
+## 3. Fases de Implementação
 
-### Phase 1: Fundamento (meses 1–2)
+### Fase 1: Fundamento (meses 1–2)
 - [ ] Categorização de gastos
 - [ ] Formulário de registro (data, valor, categoria)
 - [ ] Relatório mensal automático (receitas − gastos = resultado)
 
-### Phase 2: Registro Contínuo e Alerta (meses 3–4)
+### Fase 2: Registro Contínuo e Alerta (meses 3–4)
 - [ ] Integração com cartão (saldo diário + alertas)
-- [ ] Semanal/Mensual dashboard
+- [ ] Dashboard semanal/mensal
 - [ ] Dívidas e saldo em cartão
 
-### Phase 3: Otimização e Integração (meses 5+)
+### Fase 3: Otimização e Integração (meses 5+)
 - [ ] Sync com banco ou aplicativo dedicado
 - [ ] Integração de objetivos financeiros
-- [ ] Exportação para PDF/PDF
+- [ ] Exportação para PDF/Excel
 
 ---
 
@@ -70,6 +70,6 @@ Receitas e Gastos (mestria)
 - **Vantagem:** regras de orçamento automático, categorização guiada, dashboard.
 - **Desvantagem:** não é planilha; custo e aprendizado para usuários que já usam Sheets.
 
-### Scripts em Python (PowerShell/Excel)
-- **Vantagem:** full control, integração com banco via webhook.
-- **Desvantagem:** requires developer time; mais complexo para uso diário.
+### Scripts em Python (pandas/openpyxl)
+- **Vantagem:** controle total, integração com banco via webhook.
+- **Desvantagem:** exige tempo de desenvolvimento; mais complexo para uso diário.
