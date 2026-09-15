@@ -127,6 +127,43 @@ export default function Configuracoes() {
     }
   }
 
+  const [arquivo, setArquivo] = useState<File | null>(null);
+  const [modo, setModo] = useState<'mesclar' | 'substituir'>('mesclar');
+  const [confirmaSubstituir, setConfirmaSubstituir] = useState(false);
+
+  async function importar() {
+    if (!arquivo) return;
+    setTrabalhando(true);
+    try {
+      setErro('');
+      setOk('');
+      let backup: unknown;
+      try {
+        backup = JSON.parse(await arquivo.text());
+      } catch {
+        throw new Error('Arquivo inválido — não é um JSON válido');
+      }
+      const r = await api<{
+        modo: string;
+        categorias: number;
+        formasPagamento: number;
+        contas: number;
+        receitas: number;
+        despesas: number;
+      }>('/api/importar', { method: 'POST', body: JSON.stringify({ modo, backup }) });
+      setOk(
+        `Importação (${r.modo}): ${r.contas} conta(s), ${r.receitas} receita(s), ${r.despesas} despesa(s), ${r.categorias} categoria(s), ${r.formasPagamento} forma(s) novas.`,
+      );
+      setArquivo(null);
+      setConfirmaSubstituir(false);
+      await recarregar();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falha ao importar');
+    } finally {
+      setTrabalhando(false);
+    }
+  }
+
   const itens: Array<[string, number | undefined]> = [
     ['Contas', contagem?.contas],
     ['Receitas', contagem?.receitas],
@@ -181,6 +218,58 @@ export default function Configuracoes() {
           </button>
           <button type="button" onClick={() => exportarCSV('despesas')} disabled={trabalhando} className={btnSec}>
             Despesas (CSV)
+          </button>
+        </div>
+      </section>
+
+      <section aria-label="Importar backup" className={card}>
+        <h2 className="text-base font-bold">Importar backup</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Restaura o arquivo JSON gerado em “Backup completo”. Mesclar reaproveita contas e catálogo
+          existentes; substituir apaga lançamentos e contas atuais antes de importar.
+        </p>
+        <div className="mt-4 space-y-3">
+          <label className="block text-sm font-medium text-slate-600">
+            Arquivo JSON
+            <input
+              type="file"
+              accept=".json,application/json"
+              onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
+              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white"
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 text-sm font-semibold">
+            {(['mesclar', 'substituir'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => { setModo(m); setConfirmaSubstituir(false); }}
+                className={`rounded-lg px-3 py-2 capitalize transition ${
+                  modo === m ? 'bg-slate-900 text-white shadow' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+          {modo === 'substituir' && (
+            <label className="flex items-start gap-2 rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-800 ring-1 ring-inset ring-red-200">
+              <input
+                type="checkbox"
+                checked={confirmaSubstituir}
+                onChange={(e) => setConfirmaSubstituir(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-red-600"
+              />
+              Entendo que lançamentos e contas atuais serão apagados antes da importação.
+            </label>
+          )}
+          <button
+            type="button"
+            onClick={importar}
+            disabled={trabalhando || !arquivo || (modo === 'substituir' && !confirmaSubstituir)}
+            className={btnSec}
+          >
+            {trabalhando ? 'Importando…' : 'Importar backup'}
           </button>
         </div>
       </section>

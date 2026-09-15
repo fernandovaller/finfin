@@ -300,4 +300,151 @@ export class AppService {
     const c = await this.contas.delete({ usuarioId });
     return { ...lanc, contas: c.affected ?? 0 };
   }
+
+  /**
+   * Importa um backup gerado pelo GET /api/exportar.
+   * - `mesclar` (padrão): reaproveita catálogo/contas por nome, cria lançamentos novos.
+   * - `substituir`: apaga lançamentos + contas antes e importa tudo do zero.
+   * Tudo roda em transação — erro em qualquer item desfaz a importação inteira.
+   */
+  async importar(
+    usuarioId: number,
+    body: any,
+  ): Promise<{
+    modo: string;
+    categorias: number;
+    formasPagamento: number;
+    contas: number;
+    receitas: number;
+    despesas: number;
+  }> {
+    const modo = body?.modo ?? 'mesclar';
+    if (modo !== 'mesclar' && modo !== 'substituir') {
+      throw new BadRequestException('Campo "modo" deve ser "mesclar" ou "substituir"');
+    }
+    const backup = body?.backup;
+    if (!backup || typeof backup !== 'object') {
+      throw new BadRequestException('Campo "backup" inválido — envie o JSON gerado pela exportação');
+    }
+    if (backup.app !== 'finfin') {
+      throw new BadRequestException('Arquivo inválido — não é um backup do FinFin');
+    }
+    for (const chave of ['contas', 'receitas', 'despesas', 'categorias', 'formasPagamento']) {
+      if (backup[chave] !== undefined && !Array.isArray(backup[chave])) {
+        throw new BadRequestException(`Campo "backup.${chave}" deve ser uma lista`);
+      }
+    }
+    return this.contas.manager.transaction(async (tx) => {
+      if (modo === 'substituir') {
+        await tx.delete(Despesa, { usuarioId });
+        await tx.delete(Receita, { usuarioId });
+        await tx.delete(Conta, { usuarioId });
+      }
+      let nCats = 0;
+      for (const item of backup.categorias ?? []) {
+        const nome = item?.nome?.trim?.();
+        const tipo = item?.tipo;
+        if (!nome || (tipo !== 'receita' && tipo !== 'despesa')) {
+          throw new BadRequestException(`Categoria inválida no backup: ${JSON.stringify(item)?.slice(0, 80)}`);
+        }
+        const existe = await tx.findOneBy(Categoria, { usuarioId, nome, tipo });
+        if (!existe) {
+          await tx.save(Categoria, { nome, tipo, cor: item?.cor ?? 'slate', usuarioId });
+          nCats++;
+        }
+      }
+      let nFormas = 0;
+      for (const item of backup.formasPagamento ?? []) {
+        const nome = item?.nome?.trim?.();
+        if (!nome) {
+          throw new BadRequestException('Forma de pagamento inválida no backup (sem nome)');
+        }
+        const existe = await tx.findOneBy(FormaPagamento, { usuarioId, nome });
+        if (!existe) {
+          await tx.save(FormaPagamento, { nome, usuarioId });
+          nFormas++;
+        }
+      }
+      const mapaContas = new Map<number, number>();
+      let nContas = 0;
+      for (const item of backup.contas ?? []) {
+        const nome = item?.nome?.trim?.();
+        if (!nome) throw new BadRequestException('Conta inválida no backup (sem nome)');
+        const existe = await tx.findOneBy(Conta, { usuarioId, nome });
+        if (existe) {
+          if (typeof item?.id === 'number') mapaContas.set(item.id, existe.id);
+        } else {
+          const saldoInicial = Number(item?.saldoInicial) || 0;
+          let principal = item?.principal === true;
+          if (principal && (await tx.countBy(Conta, { usuarioId, principal: true })) > 0) {
+            principal = false;
+          }
+          const nova = await tx.save(Conta, {
+            nome,
+            saldoInicial,
+            nota: typeof item?.nota === 'string' ? item.nota : '',
+            icone: typeof item?.icone === 'string' ? item.icone : '',
+            principal,
+            usuarioId,
+          });
+          if (typeof item?.id === 'number') mapaContas.set(item.id, nova.id);
+          nContas++;
+        }
+      }
+      const contaDe = (idOrigem: unknown, i: number, kind: string): number => {
+        const idNovo = typeof idOrigem === 'number' ? mapaContas.get(idOrigem) : undefined;
+        if (idNovo === undefined) {
+          throw new BadRequestException(
+            `${kind} #${i + 1} referencia conta inexistente no backup (contaId ${String(idOrigem)})`,
+          );
+        }
+        return idNovo;
+      };
+      let nReceitas = 0;
+      for (const [i, item] of (backup.receitas ?? []).entries()) {
+        if (!item?.data || typeof item?.valor !== 'number' || !(item.valor > 0) || !item?.categoria?.trim?.() || !item?.origem?.trim?.()) {
+          throw new BadRequestException(`Receita #${i + 1} inválida no backup`);
+        }
+        await tx.save(Receita, {
+          data: item.data,
+          valor: item.valor,
+          categoria: item.categoria,
+          origem: item.origem,
+          formaPagamento: item?.formaPagamento ?? '',
+          contaId: contaDe(item?.contaId, i, 'Receita'),
+          nota: item?.nota ?? '',
+          usuarioId,
+        });
+        nReceitas++;
+      }
+      let nDespesas = 0;
+      for (const [i, item] of (backup.despesas ?? []).entries()) {
+        if (!item?.data || typeof item?.valor !== 'number' || !(item.valor > 0) || !item?.categoria?.trim?.()) {
+          throw new BadRequestException(`Despesa #${i + 1} inválida no backup`);
+        }
+        await tx.save(Despesa, {
+          data: item.data,
+          valor: item.valor,
+          categoria: item.categoria,
+          descricao: item?.descricao ?? '',
+          formaPagamento: item?.formaPagamento ?? '',
+          contaId: contaDe(item?.contaId, i, 'Despesa'),
+          nota: item?.nota ?? '',
+          grupoParcela: item?.grupoParcela ?? null,
+          parcelaAtual: item?.parcelaAtual ?? null,
+          parcelaTotal: item?.parcelaTotal ?? null,
+          usuarioId,
+        });
+        nDespesas++;
+      }
+      return {
+        modo,
+        categorias: nCats,
+        formasPagamento: nFormas,
+        contas: nContas,
+        receitas: nReceitas,
+        despesas: nDespesas,
+      };
+    });
+  }
 }

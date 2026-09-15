@@ -75,6 +75,11 @@ export class AppController {
     return this.appService.exportarCsv(req.usuario.id, tipo ?? '');
   }
 
+  @Post('importar')
+  importar(@Req() req: any, @Body() body: any) {
+    return this.appService.importar(req.usuario.id, body);
+  }
+
   @Delete('dados/lancamentos')
   apagarLancamentos(@Req() req: any) {
     return this.appService.apagarLancamentos(req.usuario.id);
