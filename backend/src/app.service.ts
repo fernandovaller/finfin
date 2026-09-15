@@ -258,7 +258,9 @@ export class AppService {
     tipo: string,
   ): Promise<{ filename: string; csv: string }> {
     const esc = (v: unknown): string => {
-      const s = v === null || v === undefined ? '' : String(v);
+      let s = v === null || v === undefined ? '' : String(v);
+      // Neutraliza fórmulas (=, +, -, @) ao abrir o CSV em Excel/LibreOffice.
+      if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
       return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const linha = (cols: unknown[]): string => cols.map(esc).join(';');
