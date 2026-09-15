@@ -3,9 +3,11 @@ import { api, type FormaPagamento } from '../api';
 import {
   AlertaErro,
   ConfirmarExclusao,
+  IconeCarteira,
   IconeLapiz,
   IconeLixeira,
   StatusSync,
+  TituloPagina,
 } from '../ui';
 
 export default function FormasPagamento() {
@@ -87,9 +89,9 @@ export default function FormasPagamento() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
-      <h1 className="text-xl font-bold tracking-tight">Formas de pagamento</h1>
-      <p className="text-sm text-slate-500">
+    <main className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      <TituloPagina Icon={IconeCarteira}>Formas de pagamento</TituloPagina>
+      <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
         Texto simples usado nos lançamentos (ex.: PIX, Crédito à vista).
       </p>
       <AlertaErro mensagem={erro} />
@@ -97,18 +99,18 @@ export default function FormasPagamento() {
       <div className="grid items-start gap-6 lg:grid-cols-5">
         <section
           aria-label="Nova forma de pagamento"
-          className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:col-span-2"
+          className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 lg:col-span-2"
         >
           <h2 className="text-base font-bold">Nova forma</h2>
           <form onSubmit={adicionar} className="mt-4 space-y-3">
-            <label className="block text-sm font-medium text-slate-600">
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
               Nome
               <input
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 required
                 placeholder="Ex.: PIX"
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
               />
             </label>
             <button
@@ -123,17 +125,17 @@ export default function FormasPagamento() {
 
         <section
           aria-label="Formas cadastradas"
-          className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:col-span-3"
+          className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 lg:col-span-3"
         >
           <h2 className="text-base font-bold">Cadastradas</h2>
           {carregando ? (
-            <p className="mt-3 text-sm text-slate-400">Carregando…</p>
+            <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">Carregando…</p>
           ) : itens.length === 0 ? (
-            <p className="mt-3 rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+            <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
               Nenhuma forma de pagamento cadastrada.
             </p>
           ) : (
-            <ul className="mt-3 divide-y divide-slate-100">
+            <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
               {itens.map((f) =>
                 editando?.id === f.id ? (
                   <li key={f.id} className="py-3">
@@ -142,7 +144,7 @@ export default function FormasPagamento() {
                         value={editando.nome}
                         onChange={(e) => setEditando({ ...editando, nome: e.target.value })}
                         required
-                        className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                        className="min-w-0 flex-1 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                       />
                       <button
                         type="submit"
@@ -154,7 +156,7 @@ export default function FormasPagamento() {
                       <button
                         type="button"
                         onClick={() => setEditando(null)}
-                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-bold text-slate-600 hover:bg-slate-50"
+                        className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-bold text-slate-600 dark:text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:bg-slate-800/50 dark:hover:bg-slate-800"
                       >
                         Cancelar
                       </button>
@@ -170,7 +172,7 @@ export default function FormasPagamento() {
                       onClick={() => setEditando(f)}
                       aria-label={`Editar ${f.nome}`}
                       title="Editar"
-                      className="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 hover:text-slate-600"
+                      className="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-800 hover:text-slate-600 dark:text-slate-400 dark:text-slate-500 dark:hover:text-slate-200"
                     >
                       <IconeLapiz className="h-4 w-4" />
                     </button>
@@ -179,7 +181,7 @@ export default function FormasPagamento() {
                       onClick={() => setExcluindo(f)}
                       aria-label={`Excluir ${f.nome}`}
                       title="Excluir"
-                      className="rounded-lg p-1.5 text-slate-300 transition hover:bg-red-50 hover:text-red-600"
+                      className="rounded-lg p-1.5 text-slate-300 transition hover:bg-red-50 dark:bg-red-950/50 hover:text-red-600"
                     >
                       <IconeLixeira className="h-4 w-4" />
                     </button>

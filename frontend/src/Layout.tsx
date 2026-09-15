@@ -39,7 +39,7 @@ function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
     <nav className="space-y-5 px-3">
       {GRUPOS.map((grupo, i) => (
         <div key={grupo.rotulo} className={i > 0 ? 'border-t border-slate-800 pt-4' : ''}>
-          <p className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+          <p className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 dark:text-slate-500">
             {grupo.rotulo}
           </p>
           <div className="space-y-1">
@@ -53,7 +53,7 @@ function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
                   `relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                     isActive
                       ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                      : 'text-slate-400 dark:text-slate-500 hover:bg-slate-800/60 hover:text-white'
                   }`
                 }
               >
@@ -86,7 +86,7 @@ export default function Layout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 font-sans text-slate-900 antialiased">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-800 font-sans text-slate-900 dark:text-slate-100 antialiased">
       {/* Sidebar desktop */}
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col bg-slate-900 lg:flex">
         <div className="flex items-center gap-3 px-5 pb-6 pt-6">
@@ -95,7 +95,7 @@ export default function Layout() {
           </div>
           <div>
             <p className="text-lg font-bold tracking-tight text-white">FinFin</p>
-            <p className="text-xs text-slate-400">Financeiro pessoal</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Financeiro pessoal</p>
           </div>
         </div>
         <Navegacao />
@@ -111,13 +111,13 @@ export default function Layout() {
               <button
                 type="button"
                 onClick={onSair}
-                className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-slate-400 transition hover:bg-slate-700 hover:text-white"
+                className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-slate-400 dark:text-slate-500 transition hover:bg-slate-700 hover:text-white"
               >
                 Sair
               </button>
             </div>
           )}
-          <p className="text-xs text-slate-500">FinFin · controle financeiro</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">FinFin · controle financeiro</p>
         </div>
       </aside>
 
@@ -137,7 +137,7 @@ export default function Layout() {
                 type="button"
                 onClick={() => setAberto(false)}
                 aria-label="Fechar menu"
-                className="rounded-lg px-2 py-1 text-xl leading-none text-slate-400 hover:bg-slate-800 hover:text-white"
+                className="rounded-lg px-2 py-1 text-xl leading-none text-slate-400 dark:text-slate-500 hover:bg-slate-800 hover:text-white"
               >
                 ×
               </button>
@@ -155,7 +155,7 @@ export default function Layout() {
                   <button
                     type="button"
                     onClick={onSair}
-                    className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-slate-400 transition hover:bg-slate-700 hover:text-white"
+                    className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-slate-400 dark:text-slate-500 transition hover:bg-slate-700 hover:text-white"
                   >
                     Sair
                   </button>

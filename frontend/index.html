@@ -4,6 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FinFin — Financeiro Pessoal</title>
+  <script>
+    try {
+      var t = localStorage.getItem('finfin_tema') || 'sistema';
+      if (t === 'escuro' || (t === 'sistema' && matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      }
+      document.documentElement.dataset.largura =
+        localStorage.getItem('finfin_largura') === 'fixa' ? 'fixa' : 'fluida';
+    } catch (e) {}
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link

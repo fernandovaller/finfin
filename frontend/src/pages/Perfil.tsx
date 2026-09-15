@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { atualizarPerfil, trocarSenha } from '../api';
 import { useAuth } from '../auth';
-import { AlertaErro, Avatar } from '../ui';
+import { AlertaErro, Avatar, IconeUsuario, TituloPagina } from '../ui';
 
 const MAX_BYTES = 500_000;
 
@@ -85,13 +85,13 @@ export default function Perfil() {
   }
 
   const campo =
-    'mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200';
+    'mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200';
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 px-4 py-6 sm:px-6">
-      <h1 className="text-xl font-bold tracking-tight">Perfil</h1>
+    <main className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      <TituloPagina Icon={IconeUsuario}>Perfil</TituloPagina>
 
-      <section aria-label="Dados do perfil" className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+      <section aria-label="Dados do perfil" className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
         <form onSubmit={onSalvarPerfil} className="space-y-4">
           <div className="flex items-center gap-4">
             <Avatar nome={nome || usuario.nome} avatar={avatar} tamanho="lg" />
@@ -107,7 +107,7 @@ export default function Perfil() {
                 <button
                   type="button"
                   onClick={() => setAvatar(null)}
-                  className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50"
+                  className="rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 dark:text-slate-500 transition hover:bg-slate-50 dark:bg-slate-800/50 dark:hover:bg-slate-800"
                 >
                   Remover
                 </button>
@@ -116,19 +116,19 @@ export default function Perfil() {
             </div>
           </div>
           {!avatar && (
-            <p className="text-xs text-slate-400">Sem foto, usamos as iniciais do seu nome.</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Sem foto, usamos as iniciais do seu nome.</p>
           )}
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">Nome</span>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Nome</span>
             <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} required className={campo} />
           </label>
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">E-mail</span>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">E-mail</span>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" className={campo} />
           </label>
           <AlertaErro mensagem={erroPerfil} />
           {okPerfil && (
-            <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+            <p role="status" className="rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/50 px-4 py-3 text-sm font-medium text-emerald-700 dark:text-emerald-300">
               {okPerfil}
             </p>
           )}
@@ -142,24 +142,24 @@ export default function Perfil() {
         </form>
       </section>
 
-      <section aria-label="Trocar senha" className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+      <section aria-label="Trocar senha" className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
         <h2 className="text-base font-bold">Trocar senha</h2>
         <form onSubmit={onTrocarSenha} className="mt-3 space-y-3">
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">Senha atual</span>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Senha atual</span>
             <input type="password" value={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} required autoComplete="current-password" className={campo} />
           </label>
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">Nova senha</span>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Nova senha</span>
             <input type="password" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} required minLength={6} autoComplete="new-password" placeholder="Mínimo 6 caracteres" className={campo} />
           </label>
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">Confirmar nova senha</span>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Confirmar nova senha</span>
             <input type="password" value={confirma} onChange={(e) => setConfirma(e.target.value)} required autoComplete="new-password" className={campo} />
           </label>
           <AlertaErro mensagem={erroSenha} />
           {okSenha && (
-            <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+            <p role="status" className="rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/50 px-4 py-3 text-sm font-medium text-emerald-700 dark:text-emerald-300">
               {okSenha}
             </p>
           )}

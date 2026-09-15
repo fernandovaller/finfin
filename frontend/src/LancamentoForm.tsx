@@ -49,7 +49,7 @@ const ACCENT: Record<TipoLancamento, { focus: string; submit: string }> = {
 };
 
 const inputBase =
-  'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:ring-2';
+  'w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none transition focus:ring-2';
 
 export default function LancamentoForm({
   tipo,
@@ -133,7 +133,7 @@ export default function LancamentoForm({
   return (
     <div>
       {onTipoChange && (
-        <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 text-sm font-semibold">
+        <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 dark:bg-slate-800 p-1 text-sm font-semibold">
           {(['despesa', 'receita'] as const).map((t) => (
             <button
               key={t}
@@ -144,7 +144,7 @@ export default function LancamentoForm({
                   ? t === 'receita'
                     ? 'bg-emerald-600 text-white shadow'
                     : 'bg-slate-900 text-white shadow'
-                  : 'text-slate-500 hover:text-slate-800'
+                  : 'text-slate-500 dark:text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:text-slate-200 dark:hover:text-slate-200'
               }`}
             >
               {t}
@@ -153,13 +153,13 @@ export default function LancamentoForm({
         </div>
       )}
       <form onSubmit={enviar} className="mt-4 space-y-3">
-        <label className="block text-sm font-medium text-slate-600">
+        <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
           Conta
           <select
             value={contaId}
             onChange={(e) => setContaId(e.target.value === '' ? '' : Number(e.target.value))}
             required
-            className={`mt-1 ${inputBase} bg-white ${accent.focus}`}
+            className={`mt-1 ${inputBase} bg-white dark:bg-slate-900 ${accent.focus}`}
           >
             {contas.length === 0 && <option value="">Nenhuma conta cadastrada</option>}
             {contas.map((c) => (
@@ -170,7 +170,7 @@ export default function LancamentoForm({
           </select>
         </label>
         <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm font-medium text-slate-600">
+          <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
             Data
             <input
               type="date"
@@ -180,10 +180,10 @@ export default function LancamentoForm({
               className={`mt-1 ${inputBase} ${accent.focus}`}
             />
           </label>
-          <label className="block text-sm font-medium text-slate-600">
+          <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
             Valor
             <div className="relative mt-1">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-slate-400">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-slate-400 dark:text-slate-500">
                 R$
               </span>
               <input
@@ -193,18 +193,18 @@ export default function LancamentoForm({
                 onChange={(e) => setValor(e.target.value.replace(/\D/g, '').slice(0, 12))}
                 required
                 placeholder="0,00"
-                className={`w-full rounded-lg border border-slate-300 py-2 pl-10 pr-3 text-sm tabular-nums text-slate-900 outline-none transition focus:ring-2 ${accent.focus}`}
+                className={`w-full rounded-lg border border-slate-300 dark:border-slate-700 py-2 pl-10 pr-3 text-sm tabular-nums text-slate-900 dark:text-slate-100 outline-none transition focus:ring-2 ${accent.focus}`}
               />
             </div>
           </label>
         </div>
-        <label className="block text-sm font-medium text-slate-600">
+        <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
           Categoria
           <select
             value={categoria}
             onChange={(e) => setCategoria(e.target.value)}
             required
-            className={`mt-1 ${inputBase} bg-white ${accent.focus}`}
+            className={`mt-1 ${inputBase} bg-white dark:bg-slate-900 ${accent.focus}`}
           >
             {opcoesCategoria.length === 0 && <option value="">Nenhuma categoria cadastrada</option>}
             {opcoesCategoria.map((c) => (
@@ -214,7 +214,7 @@ export default function LancamentoForm({
             ))}
           </select>
         </label>
-        <label className="block text-sm font-medium text-slate-600">
+        <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
           {tipo === 'receita' ? 'Origem' : 'Descrição'}
           <input
             value={origem}
@@ -224,12 +224,12 @@ export default function LancamentoForm({
             className={`mt-1 ${inputBase} ${accent.focus}`}
           />
         </label>
-        <label className="block text-sm font-medium text-slate-600">
+        <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
           Forma de pagamento
           <select
             value={formaPagamento}
             onChange={(e) => setFormaPagamento(e.target.value)}
-            className={`mt-1 ${inputBase} bg-white ${accent.focus}`}
+            className={`mt-1 ${inputBase} bg-white dark:bg-slate-900 ${accent.focus}`}
           >
             <option value="">Não informada</option>
             {formas.map((f) => (
@@ -239,7 +239,7 @@ export default function LancamentoForm({
             ))}
           </select>
         </label>
-        <label className="block text-sm font-medium text-slate-600">
+        <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
           Nota
           <input
             value={nota}
@@ -249,7 +249,7 @@ export default function LancamentoForm({
           />
         </label>
         {mostraParcelas && (
-          <label className="block text-sm font-medium text-slate-600">
+          <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
             Parcelas
             <input
               type="number"
@@ -260,7 +260,7 @@ export default function LancamentoForm({
               className={`mt-1 ${inputBase} ${accent.focus}`}
             />
             {parcelas > 1 && (
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                 Serão criadas {parcelas} despesas mensais de{' '}
                 {((Number(valor) / 100 || 0) / parcelas).toLocaleString('pt-BR', {
                   style: 'currency',

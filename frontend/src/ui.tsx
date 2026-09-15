@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 
 /* ---------- formatação ---------- */
 
@@ -29,14 +29,14 @@ export function pluralLancamentos(n: number): string {
 /* ---------- cores de categoria (chave do banco -> classes tailwind) ---------- */
 
 const COR_MAP: Record<string, string> = {
-  sky: 'bg-sky-100 text-sky-800 ring-sky-200',
-  violet: 'bg-violet-100 text-violet-800 ring-violet-200',
-  amber: 'bg-amber-100 text-amber-800 ring-amber-200',
-  pink: 'bg-pink-100 text-pink-800 ring-pink-200',
-  emerald: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
-  teal: 'bg-teal-100 text-teal-800 ring-teal-200',
-  rose: 'bg-rose-100 text-rose-800 ring-rose-200',
-  slate: 'bg-slate-200 text-slate-700 ring-slate-300',
+  sky: 'bg-sky-100 text-sky-800 ring-sky-200 dark:bg-sky-950 dark:text-sky-300 dark:ring-sky-900',
+  violet: 'bg-violet-100 text-violet-800 ring-violet-200 dark:bg-violet-950 dark:text-violet-300 dark:ring-violet-900',
+  amber: 'bg-amber-100 text-amber-800 ring-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-900',
+  pink: 'bg-pink-100 text-pink-800 ring-pink-200 dark:bg-pink-950 dark:text-pink-300 dark:ring-pink-900',
+  emerald: 'bg-emerald-100 text-emerald-800 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:ring-emerald-900',
+  teal: 'bg-teal-100 text-teal-800 ring-teal-200 dark:bg-teal-950 dark:text-teal-300 dark:ring-teal-900',
+  rose: 'bg-rose-100 text-rose-800 ring-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:ring-rose-900',
+  slate: 'bg-slate-200 text-slate-700 ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700',
 };
 
 const COR_SWATCH: Record<string, string> = {
@@ -156,6 +156,25 @@ export const IconeEngrenagem = ({ className }: { className: string }) => (
   </Svg>
 );
 
+/* ---------- título de página (mesmo ícone do menu + texto) ---------- */
+
+export function TituloPagina({
+  Icon,
+  children,
+}: {
+  Icon: ComponentType<{ className: string }>;
+  children: ReactNode;
+}) {
+  return (
+    <span className="flex items-center gap-3">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm dark:bg-slate-200 dark:text-slate-900">
+        <Icon className="h-5 w-5" />
+      </span>
+      <h1 className="text-xl font-bold tracking-tight">{children}</h1>
+    </span>
+  );
+}
+
 /* ---------- avatar (foto ou iniciais) ---------- */
 
 const AVATAR_CORES = [
@@ -242,7 +261,7 @@ export function AlertaErro({ mensagem }: { mensagem: string }) {
   return (
     <p
       role="alert"
-      className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+      className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/50 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-400"
     >
       {mensagem}
     </p>
@@ -270,7 +289,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-titulo"
-        className={`max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-white p-6 shadow-xl ${wide ? 'max-w-md' : 'max-w-sm'}`}
+        className={`max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-xl ${wide ? 'max-w-md' : 'max-w-sm'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="modal-titulo" className="text-base font-bold">
@@ -293,7 +312,7 @@ export function ConfirmarExclusao({
 }) {
   return (
     <Modal titulo="Excluir?" onFechar={onCancelar}>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-slate-600 dark:text-slate-400 dark:text-slate-500">
         Tem certeza que deseja excluir <strong>“{descricao}”</strong>? Essa ação não pode ser
         desfeita.
       </p>
@@ -301,7 +320,7 @@ export function ConfirmarExclusao({
         <button
           type="button"
           onClick={onCancelar}
-          className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+          className="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-800/50 dark:hover:bg-slate-800"
         >
           Cancelar
         </button>
@@ -327,7 +346,7 @@ export function StatusSync({
   sincronizadoEm: Date | null;
 }) {
   return (
-    <footer className="flex items-center justify-center gap-2 pb-4 text-xs text-slate-400">
+    <footer className="flex items-center justify-center gap-2 pb-4 text-xs text-slate-400 dark:text-slate-500">
       {carregando ? (
         <>
           <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
@@ -335,7 +354,7 @@ export function StatusSync({
         </>
       ) : erro ? (
         <>
-          <span className="h-2 w-2 rounded-full bg-red-500" />
+          <span className="h-2 w-2 rounded-full bg-red-50 dark:bg-red-950/500" />
           Falha na sincronização
         </>
       ) : (

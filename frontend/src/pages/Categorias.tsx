@@ -7,7 +7,9 @@ import {
   corSwatch,
   IconeLapiz,
   IconeLixeira,
+  IconeTag,
   StatusSync,
+  TituloPagina,
 } from '../ui';
 
 type Tipo = 'despesa' | 'receita';
@@ -92,24 +94,24 @@ export default function Categorias() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
-      <h1 className="text-xl font-bold tracking-tight">Categorias</h1>
+    <main className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      <TituloPagina Icon={IconeTag}>Categorias</TituloPagina>
       <AlertaErro mensagem={erro} />
 
       <div className="grid items-start gap-6 lg:grid-cols-5">
         <section
           aria-label="Nova categoria"
-          className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:col-span-2"
+          className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 lg:col-span-2"
         >
           <h2 className="text-base font-bold">Nova categoria</h2>
-          <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 text-sm font-semibold">
+          <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 dark:bg-slate-800 p-1 text-sm font-semibold">
             {(['despesa', 'receita'] as const).map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setTipo(t)}
                 className={`rounded-lg px-3 py-2 capitalize transition ${
-                  tipo === t ? 'bg-slate-900 text-white shadow' : 'text-slate-500 hover:text-slate-800'
+                  tipo === t ? 'bg-slate-900 text-white shadow' : 'text-slate-500 dark:text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:text-slate-200 dark:hover:text-slate-200'
                 }`}
               >
                 {t}
@@ -117,18 +119,18 @@ export default function Categorias() {
             ))}
           </div>
           <form onSubmit={adicionar} className="mt-4 space-y-3">
-            <label className="block text-sm font-medium text-slate-600">
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
               Nome
               <input
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 required
                 placeholder={tipo === 'receita' ? 'Ex.: Salário' : 'Ex.: Lazer'}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
               />
             </label>
             <div>
-              <p className="text-sm font-medium text-slate-600">Cor</p>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">Cor</p>
               <div className="mt-1.5 flex flex-wrap gap-2">
                 {CORES_CATEGORIA.map((c) => (
                   <button
@@ -156,17 +158,17 @@ export default function Categorias() {
 
         <section
           aria-label="Categorias cadastradas"
-          className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:col-span-3"
+          className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 lg:col-span-3"
         >
           <h2 className="text-base font-bold capitalize">De {tipo === 'receita' ? 'receitas' : 'despesas'}</h2>
           {carregando ? (
-            <p className="mt-3 text-sm text-slate-400">Carregando…</p>
+            <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">Carregando…</p>
           ) : visiveis.length === 0 ? (
-            <p className="mt-3 rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+            <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
               Nenhuma categoria de {tipo} cadastrada.
             </p>
           ) : (
-            <ul className="mt-3 divide-y divide-slate-100">
+            <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
               {visiveis.map((c) =>
                 editando?.id === c.id ? (
                   <li key={c.id} className="py-3">
@@ -175,12 +177,12 @@ export default function Categorias() {
                         value={editando.nome}
                         onChange={(e) => setEditando({ ...editando, nome: e.target.value })}
                         required
-                        className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                        className="min-w-0 flex-1 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                       />
                       <select
                         value={editando.cor}
                         onChange={(e) => setEditando({ ...editando, cor: e.target.value })}
-                        className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none"
+                        className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 text-sm outline-none"
                         aria-label="Cor"
                       >
                         {CORES_CATEGORIA.map((k) => (
@@ -199,7 +201,7 @@ export default function Categorias() {
                       <button
                         type="button"
                         onClick={() => setEditando(null)}
-                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-bold text-slate-600 hover:bg-slate-50"
+                        className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-bold text-slate-600 dark:text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:bg-slate-800/50 dark:hover:bg-slate-800"
                       >
                         Cancelar
                       </button>
@@ -219,7 +221,7 @@ export default function Categorias() {
                       onClick={() => setEditando(c)}
                       aria-label={`Editar categoria ${c.nome}`}
                       title="Editar"
-                      className="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 hover:text-slate-600"
+                      className="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-800 hover:text-slate-600 dark:text-slate-400 dark:text-slate-500 dark:hover:text-slate-200"
                     >
                       <IconeLapiz className="h-4 w-4" />
                     </button>
@@ -228,7 +230,7 @@ export default function Categorias() {
                       onClick={() => setExcluindo(c)}
                       aria-label={`Excluir categoria ${c.nome}`}
                       title="Excluir"
-                      className="rounded-lg p-1.5 text-slate-300 transition hover:bg-red-50 hover:text-red-600"
+                      className="rounded-lg p-1.5 text-slate-300 transition hover:bg-red-50 dark:bg-red-950/50 hover:text-red-600"
                     >
                       <IconeLixeira className="h-4 w-4" />
                     </button>

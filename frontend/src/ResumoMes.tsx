@@ -19,29 +19,29 @@ export default function ResumoMes({ resumo, carregando, mes, qtdReceitas, qtdDes
   return (
     <>
       <section aria-label="Resumo do mês" className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <div className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-500">Receitas · {mesLabel(mes)}</p>
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
-              <IconeSeta direcao="cima" className="h-4 w-4 text-emerald-600" />
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 dark:text-slate-500">Receitas · {mesLabel(mes)}</p>
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950">
+              <IconeSeta direcao="cima" className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </span>
           </div>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-600">
+          <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
             {carregando ? '…' : BRL.format(totalReceitas)}
           </p>
-          <p className="mt-1 text-xs text-slate-400">{pluralLancamentos(qtdReceitas)}</p>
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{pluralLancamentos(qtdReceitas)}</p>
         </div>
-        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <div className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-500">Despesas · {mesLabel(mes)}</p>
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100">
-              <IconeSeta direcao="baixo" className="h-4 w-4 text-rose-600" />
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 dark:text-slate-500">Despesas · {mesLabel(mes)}</p>
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-950">
+              <IconeSeta direcao="baixo" className="h-4 w-4 text-rose-600 dark:text-rose-400" />
             </span>
           </div>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-rose-600">
+          <p className="mt-1 text-2xl font-bold tabular-nums text-rose-600 dark:text-rose-400">
             {carregando ? '…' : BRL.format(totalDespesas)}
           </p>
-          <p className="mt-1 text-xs text-slate-400">{pluralLancamentos(qtdDespesas)}</p>
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{pluralLancamentos(qtdDespesas)}</p>
         </div>
         <div
           className={`rounded-2xl p-5 shadow-sm ring-1 ${
@@ -64,13 +64,13 @@ export default function ResumoMes({ resumo, carregando, mes, qtdReceitas, qtdDes
 
       <div
         aria-label="Proporção entre despesas e receitas"
-        className="rounded-2xl bg-white px-5 py-4 shadow-sm ring-1 ring-slate-200"
+        className="rounded-2xl bg-white dark:bg-slate-900 px-5 py-4 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"
       >
-        <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+        <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
           <div className="bg-emerald-500 transition-all" style={{ width: `${100 - pctDespesas}%` }} />
           <div className="bg-rose-500 transition-all" style={{ width: `${pctDespesas}%` }} />
         </div>
-        <div className="mt-2 flex justify-between text-xs font-medium text-slate-500">
+        <div className="mt-2 flex justify-between text-xs font-medium text-slate-500 dark:text-slate-400 dark:text-slate-500">
           <span>
             <span className="mr-1 inline-block h-2 w-2 rounded-full bg-emerald-500" />
             Receitas {100 - pctDespesas}%

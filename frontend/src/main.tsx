@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth';
+import { ProvedorAparencia } from './tema';
 import Layout from './Layout';
 import Categorias from './pages/Categorias';
 import Configuracoes from './pages/Configuracoes';
@@ -29,6 +30,7 @@ function RotaProtegida({ children }: { children: React.ReactNode }) {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
+    <ProvedorAparencia>
     <AuthProvider>
       <HashRouter>
         <Routes>
@@ -53,5 +55,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </Routes>
       </HashRouter>
     </AuthProvider>
+    </ProvedorAparencia>
   </React.StrictMode>,
 );

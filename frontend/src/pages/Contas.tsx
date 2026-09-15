@@ -4,9 +4,11 @@ import {
   AlertaErro,
   BRL,
   ConfirmarExclusao,
+  IconeCarteira,
   IconeLapiz,
   IconeLixeira,
   StatusSync,
+  TituloPagina,
 } from '../ui';
 
 const ICONES = ['', '💰', '🏦', '💳', '💵', '📈', '🐷', '✈️', '🏠', '🚗'];
@@ -104,12 +106,12 @@ export default function Contas() {
   }
 
   const inputCls =
-    'mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200';
+    'mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200';
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
-      <h1 className="text-xl font-bold tracking-tight">Contas</h1>
-      <p className="text-sm text-slate-500">
+    <main className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      <TituloPagina Icon={IconeCarteira}>Contas</TituloPagina>
+      <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
         Cada lançamento pertence a uma conta (ex.: Cartão de crédito, Cartão de débito, Carteira).
       </p>
       <AlertaErro mensagem={erro} />
@@ -117,11 +119,11 @@ export default function Contas() {
       <div className="grid items-start gap-6 lg:grid-cols-5">
         <section
           aria-label="Nova conta"
-          className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:col-span-2"
+          className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 lg:col-span-2"
         >
           <h2 className="text-base font-bold">Nova conta</h2>
           <form onSubmit={adicionar} className="mt-4 space-y-3">
-            <label className="block text-sm font-medium text-slate-600">
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
               Descrição
               <input
                 value={form.nome}
@@ -132,7 +134,7 @@ export default function Contas() {
               />
             </label>
             <div className="grid grid-cols-2 gap-3">
-              <label className="block text-sm font-medium text-slate-600">
+              <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
                 Saldo inicial (R$)
                 <input
                   type="number"
@@ -143,12 +145,12 @@ export default function Contas() {
                   className={`${inputCls} tabular-nums`}
                 />
               </label>
-              <label className="block text-sm font-medium text-slate-600">
+              <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
                 Ícone
                 <select
                   value={form.icone}
                   onChange={(e) => setForm({ ...form, icone: e.target.value })}
-                  className={`${inputCls} bg-white`}
+                  className={`${inputCls} bg-white dark:bg-slate-900`}
                 >
                   {ICONES.map((i) => (
                     <option key={i} value={i}>
@@ -158,7 +160,7 @@ export default function Contas() {
                 </select>
               </label>
             </div>
-            <label className="block text-sm font-medium text-slate-600">
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
               Nota
               <input
                 value={form.nota}
@@ -167,12 +169,12 @@ export default function Contas() {
                 className={inputCls}
               />
             </label>
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-600">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
               <input
                 type="checkbox"
                 checked={form.principal}
                 onChange={(e) => setForm({ ...form, principal: e.target.checked })}
-                className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
+                className="h-4 w-4 rounded border-slate-300 dark:border-slate-700 accent-emerald-600"
               />
               Conta principal
             </label>
@@ -188,17 +190,17 @@ export default function Contas() {
 
         <section
           aria-label="Contas cadastradas"
-          className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:col-span-3"
+          className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 lg:col-span-3"
         >
           <h2 className="text-base font-bold">Cadastradas</h2>
           {carregando ? (
-            <p className="mt-3 text-sm text-slate-400">Carregando…</p>
+            <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">Carregando…</p>
           ) : itens.length === 0 ? (
-            <p className="mt-3 rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+            <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
               Nenhuma conta cadastrada.
             </p>
           ) : (
-            <ul className="mt-3 divide-y divide-slate-100">
+            <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
               {itens.map((c) =>
                 editando?.id === c.id ? (
                   <li key={c.id} className="py-3">
@@ -208,7 +210,7 @@ export default function Contas() {
                           value={editando.nome}
                           onChange={(e) => setEditando({ ...editando, nome: e.target.value })}
                           required
-                          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                          className="min-w-0 flex-1 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                           aria-label="Descrição"
                         />
                         <input
@@ -218,13 +220,13 @@ export default function Contas() {
                           onChange={(e) =>
                             setEditando({ ...editando, saldoInicial: Number(e.target.value) || 0 })
                           }
-                          className="w-28 rounded-lg border border-slate-300 px-3 py-1.5 text-sm tabular-nums outline-none"
+                          className="w-28 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm tabular-nums outline-none"
                           aria-label="Saldo inicial"
                         />
                         <select
                           value={editando.icone ?? ''}
                           onChange={(e) => setEditando({ ...editando, icone: e.target.value })}
-                          className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none"
+                          className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 text-sm outline-none"
                           aria-label="Ícone"
                         >
                           {ICONES.map((i) => (
@@ -238,18 +240,18 @@ export default function Contas() {
                         value={editando.nota ?? ''}
                         onChange={(e) => setEditando({ ...editando, nota: e.target.value })}
                         placeholder="Nota"
-                        className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                         aria-label="Nota"
                       />
                       <div className="flex flex-wrap items-center gap-2">
-                        <label className="flex items-center gap-2 text-sm text-slate-600">
+                        <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 dark:text-slate-500">
                           <input
                             type="checkbox"
                             checked={editando.principal ?? false}
                             onChange={(e) =>
                               setEditando({ ...editando, principal: e.target.checked })
                             }
-                            className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
+                            className="h-4 w-4 rounded border-slate-300 dark:border-slate-700 accent-emerald-600"
                           />
                           Principal
                         </label>
@@ -264,7 +266,7 @@ export default function Contas() {
                         <button
                           type="button"
                           onClick={() => setEditando(null)}
-                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-bold text-slate-600 hover:bg-slate-50"
+                          className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-bold text-slate-600 dark:text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:bg-slate-800/50 dark:hover:bg-slate-800"
                         >
                           Cancelar
                         </button>
@@ -273,21 +275,21 @@ export default function Contas() {
                   </li>
                 ) : (
                   <li key={c.id} className="flex items-center gap-3 py-2.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-base">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-base">
                       {c.icone || '💰'}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold">
                         {c.nome}
                         {c.principal && (
-                          <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">
+                          <span className="ml-2 rounded-full bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-300">
                             Principal
                           </span>
                         )}
                       </p>
-                      {c.nota && <p className="truncate text-xs text-slate-400">{c.nota}</p>}
+                      {c.nota && <p className="truncate text-xs text-slate-400 dark:text-slate-500">{c.nota}</p>}
                     </div>
-                    <span className="text-sm tabular-nums text-slate-500">
+                    <span className="text-sm tabular-nums text-slate-500 dark:text-slate-400 dark:text-slate-500">
                       {BRL.format(c.saldoInicial)}
                     </span>
                     <button
@@ -295,7 +297,7 @@ export default function Contas() {
                       onClick={() => setEditando(c)}
                       aria-label={`Editar ${c.nome}`}
                       title="Editar"
-                      className="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 hover:text-slate-600"
+                      className="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-800 hover:text-slate-600 dark:text-slate-400 dark:text-slate-500 dark:hover:text-slate-200"
                     >
                       <IconeLapiz className="h-4 w-4" />
                     </button>
@@ -304,7 +306,7 @@ export default function Contas() {
                       onClick={() => setExcluindo(c)}
                       aria-label={`Excluir ${c.nome}`}
                       title="Excluir"
-                      className="rounded-lg p-1.5 text-slate-300 transition hover:bg-red-50 hover:text-red-600"
+                      className="rounded-lg p-1.5 text-slate-300 transition hover:bg-red-50 dark:bg-red-950/50 hover:text-red-600"
                     >
                       <IconeLixeira className="h-4 w-4" />
                     </button>

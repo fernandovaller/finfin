@@ -5,16 +5,18 @@ import {
   BRL,
   corBadge,
   deslocarMes,
+  IconeGrafico,
   mesAtual,
   MesNav,
   mesLabel,
   StatusSync,
+  TituloPagina,
 } from '../ui';
 import { useCatalogo } from './useCatalogo';
 
 function barra(pct: number, classe: string) {
   return (
-    <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-100">
+    <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
       <div className={`h-full rounded-full ${classe}`} style={{ width: `${Math.min(100, pct)}%` }} />
     </div>
   );
@@ -96,14 +98,14 @@ export default function Relatorios() {
   }, [recMes, desMes, contaPorId]);
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+    <main className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold tracking-tight">Relatórios</h1>
+        <TituloPagina Icon={IconeGrafico}>Relatórios</TituloPagina>
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={contaFiltro}
             onChange={(e) => setContaFiltro(e.target.value === '' ? '' : Number(e.target.value))}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none"
+            className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm outline-none"
             aria-label="Filtrar por conta"
           >
             <option value="">Todas as contas</option>
@@ -120,22 +122,22 @@ export default function Relatorios() {
       <AlertaErro mensagem={erro} />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          <p className="text-sm font-medium text-slate-500">Receitas · {mesLabel(mes)}</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-600">
+        <div className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 dark:text-slate-500">Receitas · {mesLabel(mes)}</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
             {carregando ? '…' : BRL.format(totalRec)}
           </p>
         </div>
-        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          <p className="text-sm font-medium text-slate-500">Despesas · {mesLabel(mes)}</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-rose-600">
+        <div className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 dark:text-slate-500">Despesas · {mesLabel(mes)}</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-rose-600 dark:text-rose-400">
             {carregando ? '…' : BRL.format(totalDes)}
           </p>
         </div>
-        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          <p className="text-sm font-medium text-slate-500">Saldo · {mesLabel(mes)}</p>
+        <div className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 dark:text-slate-500">Saldo · {mesLabel(mes)}</p>
           <p
-            className={`mt-1 text-2xl font-bold tabular-nums ${totalRec - totalDes >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+            className={`mt-1 text-2xl font-bold tabular-nums ${totalRec - totalDes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}
           >
             {carregando ? '…' : BRL.format(totalRec - totalDes)}
           </p>
@@ -145,11 +147,11 @@ export default function Relatorios() {
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <section
           aria-label="Despesas por categoria"
-          className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"
+          className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"
         >
           <h2 className="text-base font-bold">Despesas por categoria</h2>
           {porCategoria.length === 0 ? (
-            <p className="mt-3 rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+            <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
               Sem despesas neste mês.
             </p>
           ) : (
@@ -173,11 +175,11 @@ export default function Relatorios() {
 
         <section
           aria-label="Despesas por forma de pagamento"
-          className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"
+          className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"
         >
           <h2 className="text-base font-bold">Por cartão / pagamento</h2>
           {porForma.length === 0 ? (
-            <p className="mt-3 rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+            <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
               Sem despesas neste mês.
             </p>
           ) : (
@@ -189,7 +191,7 @@ export default function Relatorios() {
                   <span className="w-24 shrink-0 text-right text-sm font-bold tabular-nums">
                     {BRL.format(total)}
                   </span>
-                  <span className="w-8 shrink-0 text-right text-xs text-slate-400">×{qtd}</span>
+                  <span className="w-8 shrink-0 text-right text-xs text-slate-400 dark:text-slate-500">×{qtd}</span>
                 </li>
               ))}
             </ul>
@@ -199,31 +201,31 @@ export default function Relatorios() {
 
       <section
         aria-label="Saldo por conta"
-        className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200"
+        className="overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"
       >
         <h2 className="px-5 pt-5 text-base font-bold">Por conta · {mesLabel(mes)}</h2>
         <div className="overflow-x-auto p-5 pt-3">
           {porConta.length === 0 ? (
-            <p className="rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+            <p className="rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
               Sem movimentos neste mês.
             </p>
           ) : (
             <table className="w-full min-w-[480px] text-sm">
               <thead>
-                <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
+                <tr className="text-left text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">
                   <th className="pb-2 font-semibold">Conta</th>
                   <th className="pb-2 text-right font-semibold">Receitas</th>
                   <th className="pb-2 text-right font-semibold">Despesas</th>
                   <th className="pb-2 text-right font-semibold">Saldo</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {porConta.map(([nome, { rec, des }]) => (
                   <tr key={nome}>
                     <td className="py-2 pr-4 font-medium">{nome}</td>
-                    <td className="py-2 text-right tabular-nums text-emerald-600">{BRL.format(rec)}</td>
-                    <td className="py-2 text-right tabular-nums text-rose-600">{BRL.format(des)}</td>
-                    <td className="py-2 text-right tabular-nums text-slate-800">{BRL.format(rec - des)}</td>
+                    <td className="py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400">{BRL.format(rec)}</td>
+                    <td className="py-2 text-right tabular-nums text-rose-600 dark:text-rose-400">{BRL.format(des)}</td>
+                    <td className="py-2 text-right tabular-nums text-slate-800 dark:text-slate-200">{BRL.format(rec - des)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -234,27 +236,27 @@ export default function Relatorios() {
 
       <section
         aria-label="Últimos 6 meses"
-        className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200"
+        className="overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"
       >
         <h2 className="px-5 pt-5 text-base font-bold">Últimos 6 meses</h2>
         <div className="overflow-x-auto p-5 pt-3">
           <table className="w-full min-w-[480px] text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
+              <tr className="text-left text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 <th className="pb-2 font-semibold">Mês</th>
                 <th className="pb-2 text-right font-semibold">Receitas</th>
                 <th className="pb-2 text-right font-semibold">Despesas</th>
                 <th className="pb-2 text-right font-semibold">Saldo</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {ultimosMeses.map(({ mes: m, rec, des }) => (
-                <tr key={m} className={m === mes ? 'bg-emerald-50/60 font-semibold' : ''}>
+                <tr key={m} className={m === mes ? 'bg-emerald-50/60 dark:bg-emerald-950/40 font-semibold' : ''}>
                   <td className="py-2 pr-4 capitalize">{mesLabel(m)}</td>
-                  <td className="py-2 text-right tabular-nums text-emerald-600">{BRL.format(rec)}</td>
-                  <td className="py-2 text-right tabular-nums text-rose-600">{BRL.format(des)}</td>
+                  <td className="py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400">{BRL.format(rec)}</td>
+                  <td className="py-2 text-right tabular-nums text-rose-600 dark:text-rose-400">{BRL.format(des)}</td>
                   <td
-                    className={`py-2 text-right tabular-nums ${rec - des >= 0 ? 'text-slate-800' : 'font-bold text-rose-600'}`}
+                    className={`py-2 text-right tabular-nums ${rec - des >= 0 ? 'text-slate-800 dark:text-slate-200' : 'font-bold text-rose-600 dark:text-rose-400'}`}
                   >
                     {BRL.format(rec - des)}
                   </td>

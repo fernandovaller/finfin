@@ -42,12 +42,12 @@ export default function Login() {
           </div>
           <div>
             <p className="text-xl font-bold tracking-tight text-white">FinFin</p>
-            <p className="text-xs text-slate-400">Financeiro pessoal</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Financeiro pessoal</p>
           </div>
         </div>
 
-        <div className="rounded-2xl bg-white p-6 shadow-xl">
-          <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1" role="tablist">
+        <div className="rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-xl">
+          <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 dark:bg-slate-800 p-1" role="tablist">
             {(
               [
                 ['entrar', 'Entrar'],
@@ -64,7 +64,7 @@ export default function Login() {
                   setErro('');
                 }}
                 className={`rounded-lg px-3 py-2 text-sm font-bold transition ${
-                  modo === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  modo === m ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-300'
                 }`}
               >
                 {rotulo}
@@ -75,7 +75,7 @@ export default function Login() {
           <h1 className="mt-5 text-base font-bold">
             {modo === 'entrar' ? 'Acesse sua conta' : 'Crie sua conta'}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
             {modo === 'entrar'
               ? 'Entre para ver seus lançamentos.'
               : 'Cada conta enxerga só os próprios lançamentos.'}
@@ -84,7 +84,7 @@ export default function Login() {
           <form onSubmit={onSubmit} className="mt-4 space-y-3">
             {modo === 'criar' && (
               <label className="block">
-                <span className="text-sm font-semibold text-slate-700">Nome</span>
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Nome</span>
                 <input
                   type="text"
                   value={nome}
@@ -92,12 +92,12 @@ export default function Login() {
                   required
                   autoComplete="name"
                   placeholder="Seu nome"
-                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                  className="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                 />
               </label>
             )}
             <label className="block">
-              <span className="text-sm font-semibold text-slate-700">E-mail</span>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">E-mail</span>
               <input
                 type="email"
                 value={email}
@@ -105,11 +105,11 @@ export default function Login() {
                 required
                 autoComplete="email"
                 placeholder="voce@exemplo.com"
-                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                className="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
               />
             </label>
             <label className="block">
-              <span className="text-sm font-semibold text-slate-700">Senha</span>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Senha</span>
               <input
                 type="password"
                 value={senha}
@@ -118,7 +118,7 @@ export default function Login() {
                 minLength={modo === 'criar' ? 6 : 1}
                 autoComplete={modo === 'criar' ? 'new-password' : 'current-password'}
                 placeholder={modo === 'criar' ? 'Mínimo 6 caracteres' : 'Sua senha'}
-                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                className="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
               />
             </label>
             <AlertaErro mensagem={erro} />

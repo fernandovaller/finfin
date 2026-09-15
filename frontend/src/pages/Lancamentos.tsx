@@ -7,6 +7,7 @@ import {
   ConfirmarExclusao,
   corBadge,
   formatarData,
+  IconeExtrato,
   IconeLapiz,
   IconeLixeira,
   mesAtual,
@@ -14,6 +15,7 @@ import {
   mesLabel,
   Modal,
   StatusSync,
+  TituloPagina,
 } from '../ui';
 import { useCatalogo } from './useCatalogo';
 
@@ -133,14 +135,14 @@ export default function Lancamentos() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+    <main className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold tracking-tight">Lançamentos</h1>
+        <TituloPagina Icon={IconeExtrato}>Lançamentos</TituloPagina>
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={contaFiltro}
             onChange={(e) => setContaFiltro(e.target.value === '' ? '' : Number(e.target.value))}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none"
+            className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm outline-none"
             aria-label="Filtrar por conta"
           >
             <option value="">Todas as contas</option>
@@ -159,7 +161,7 @@ export default function Lancamentos() {
       <div className="grid items-start gap-6 lg:grid-cols-5">
         <section
           aria-label="Novo lançamento"
-          className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:col-span-2"
+          className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 lg:col-span-2"
         >
           <h2 className="text-base font-bold">Novo lançamento</h2>
           <div className="mt-3">
@@ -182,27 +184,27 @@ export default function Lancamentos() {
         <div className="space-y-6 lg:col-span-3">
           <section
             aria-label="Receitas do mês"
-            className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"
+            className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"
           >
             <h2 className="text-base font-bold">
-              Receitas <span className="ml-1 text-sm font-medium text-slate-400">· {mesLabel(mes)}</span>
+              Receitas <span className="ml-1 text-sm font-medium text-slate-400 dark:text-slate-500">· {mesLabel(mes)}</span>
             </h2>
             {carregando ? (
-              <p className="mt-3 text-sm text-slate-400">Carregando…</p>
+              <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">Carregando…</p>
             ) : receitasDoMes.length === 0 ? (
-              <p className="mt-3 rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+              <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
                 Nenhuma receita neste mês.
               </p>
             ) : (
-              <ul className="mt-3 divide-y divide-slate-100">
+              <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
                 {receitasDoMes.map((r) => (
                   <li key={r.id} className="flex items-center gap-3 py-2.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950 text-sm font-bold text-emerald-700 dark:text-emerald-300">
                       +
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold">{r.origem}</p>
-                      <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
+                      <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
                         {formatarData(r.data)}
                         {contaPorId(r.contaId) && <span>· {contaPorId(r.contaId)}</span>}
                         <span
@@ -212,9 +214,9 @@ export default function Lancamentos() {
                         </span>
                         {r.formaPagamento && <span>· {r.formaPagamento}</span>}
                       </p>
-                      {r.nota && <p className="truncate text-xs italic text-slate-400">{r.nota}</p>}
+                      {r.nota && <p className="truncate text-xs italic text-slate-400 dark:text-slate-500">{r.nota}</p>}
                     </div>
-                    <p className="text-sm font-bold tabular-nums text-emerald-600">
+                    <p className="text-sm font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
                       {BRL.format(r.valor)}
                     </p>
                     <div className="flex shrink-0 gap-1">
@@ -223,7 +225,7 @@ export default function Lancamentos() {
                         onClick={() => setEdicao({ kind: 'receita', item: r })}
                         aria-label={`Editar receita ${r.origem}`}
                         title="Editar"
-                        className="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 hover:text-slate-600"
+                        className="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-800 hover:text-slate-600 dark:text-slate-400 dark:text-slate-500 dark:hover:text-slate-200"
                       >
                         <IconeLapiz className="h-4 w-4" />
                       </button>
@@ -234,7 +236,7 @@ export default function Lancamentos() {
                         }
                         aria-label={`Excluir receita ${r.origem}`}
                         title="Excluir"
-                        className="rounded-lg p-1.5 text-slate-300 transition hover:bg-red-50 hover:text-red-600"
+                        className="rounded-lg p-1.5 text-slate-300 transition hover:bg-red-50 dark:bg-red-950/50 hover:text-red-600"
                       >
                         <IconeLixeira className="h-4 w-4" />
                       </button>
@@ -247,27 +249,27 @@ export default function Lancamentos() {
 
           <section
             aria-label="Despesas do mês"
-            className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"
+            className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"
           >
             <h2 className="text-base font-bold">
-              Despesas <span className="ml-1 text-sm font-medium text-slate-400">· {mesLabel(mes)}</span>
+              Despesas <span className="ml-1 text-sm font-medium text-slate-400 dark:text-slate-500">· {mesLabel(mes)}</span>
             </h2>
             {carregando ? (
-              <p className="mt-3 text-sm text-slate-400">Carregando…</p>
+              <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">Carregando…</p>
             ) : despesasDoMes.length === 0 ? (
-              <p className="mt-3 rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+              <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
                 Nenhuma despesa neste mês.
               </p>
             ) : (
-              <ul className="mt-3 divide-y divide-slate-100">
+              <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
                 {despesasDoMes.map((d) => (
                   <li key={d.id} className="flex items-center gap-3 py-2.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-100 text-sm font-bold text-rose-700">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-950 text-sm font-bold text-rose-700 dark:text-rose-300">
                       −
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold">{d.descricao || d.categoria}</p>
-                      <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
+                      <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
                         {formatarData(d.data)}
                         {contaPorId(d.contaId) && <span>· {contaPorId(d.contaId)}</span>}
                         <span
@@ -277,14 +279,14 @@ export default function Lancamentos() {
                         </span>
                         {d.formaPagamento && <span>· {d.formaPagamento}</span>}
                         {d.parcelaAtual && d.parcelaTotal && (
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600 ring-1 ring-inset ring-slate-200">
+                          <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 font-semibold text-slate-600 dark:text-slate-400 dark:text-slate-500 ring-1 ring-inset ring-slate-200 dark:ring-slate-800">
                             {d.parcelaAtual}/{d.parcelaTotal}
                           </span>
                         )}
                       </p>
-                      {d.nota && <p className="truncate text-xs italic text-slate-400">{d.nota}</p>}
+                      {d.nota && <p className="truncate text-xs italic text-slate-400 dark:text-slate-500">{d.nota}</p>}
                     </div>
-                    <p className="text-sm font-bold tabular-nums text-slate-800">
+                    <p className="text-sm font-bold tabular-nums text-slate-800 dark:text-slate-200">
                       {BRL.format(d.valor)}
                     </p>
                     <div className="flex shrink-0 gap-1">
@@ -293,7 +295,7 @@ export default function Lancamentos() {
                         onClick={() => setEdicao({ kind: 'despesa', item: d })}
                         aria-label={`Editar despesa ${d.descricao || d.categoria}`}
                         title="Editar"
-                        className="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 hover:text-slate-600"
+                        className="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-800 hover:text-slate-600 dark:text-slate-400 dark:text-slate-500 dark:hover:text-slate-200"
                       >
                         <IconeLapiz className="h-4 w-4" />
                       </button>
@@ -314,7 +316,7 @@ export default function Lancamentos() {
                         }
                         aria-label={`Excluir despesa ${d.descricao || d.categoria}`}
                         title="Excluir"
-                        className="rounded-lg p-1.5 text-slate-300 transition hover:bg-red-50 hover:text-red-600"
+                        className="rounded-lg p-1.5 text-slate-300 transition hover:bg-red-50 dark:bg-red-950/50 hover:text-red-600"
                       >
                         <IconeLixeira className="h-4 w-4" />
                       </button>
@@ -366,7 +368,7 @@ export default function Lancamentos() {
           <button
             type="button"
             onClick={() => setEdicao(null)}
-            className="mt-3 w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+            className="mt-3 w-full rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-800/50 dark:hover:bg-slate-800"
           >
             Cancelar
           </button>
@@ -383,7 +385,7 @@ export default function Lancamentos() {
 
       {confirmarExclusao?.grupoPath && (
         <Modal titulo="Excluir parcela?" onFechar={() => setConfirmarExclusao(null)}>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-600 dark:text-slate-400 dark:text-slate-500">
             <strong>“{confirmarExclusao.descricao}”</strong> é a parcela{' '}
             {confirmarExclusao.parcelaInfo} de um parcelamento. O que excluir?
           </p>
@@ -391,7 +393,7 @@ export default function Lancamentos() {
             <button
               type="button"
               onClick={() => excluir(confirmarExclusao.path)}
-              className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+              className="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-800/50 dark:hover:bg-slate-800"
             >
               Só esta parcela
             </button>
