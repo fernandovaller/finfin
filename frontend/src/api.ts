@@ -7,6 +7,7 @@ export interface Receita {
   formaPagamento: string;
   contaId: number | null;
   nota: string;
+  fitid?: string | null;
 }
 
 export interface Despesa {
@@ -21,6 +22,7 @@ export interface Despesa {
   grupoParcela?: string | null;
   parcelaAtual?: number | null;
   parcelaTotal?: number | null;
+  fitid?: string | null;
 }
 
 export interface Resumo {

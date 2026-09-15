@@ -80,6 +80,11 @@ export class AppController {
     return this.appService.importar(req.usuario.id, body);
   }
 
+  @Post('importar/ofx')
+  importarOfx(@Req() req: any, @Body() body: any) {
+    return this.appService.importarOfx(req.usuario.id, body);
+  }
+
   @Delete('dados/lancamentos')
   apagarLancamentos(@Req() req: any) {
     return this.appService.apagarLancamentos(req.usuario.id);

@@ -91,7 +91,10 @@ export default function Home() {
   }, [desMes, corDe]);
 
   const saldosContas = useMemo(() => {
-    const visiveis = contaFiltro === '' ? contas : contas.filter((c) => c.id === contaFiltro);
+    const visiveis = (contaFiltro === '' ? contas : contas.filter((c) => c.id === contaFiltro)).slice().sort((a, b) => {
+      if (a.principal !== b.principal) return a.principal ? -1 : 1;
+      return a.nome.localeCompare(b.nome, 'pt-BR');
+    });
     return visiveis.map((c) => {
       const recTotal = receitas.filter((r) => r.contaId === c.id).reduce((s, r) => s + r.valor, 0);
       const desTotal = despesas.filter((d) => d.contaId === c.id).reduce((s, d) => s + d.valor, 0);

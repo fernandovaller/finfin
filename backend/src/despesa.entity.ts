@@ -27,6 +27,10 @@ export class Despesa {
   @Column({ default: '' })
   nota: string;
 
+  /** Id da transação no extrato OFX (FITID) — chave anti-duplicada na importação. */
+  @Column({ type: 'varchar', nullable: true })
+  fitid: string | null;
+
   /** Parcelamento no crédito: parcelas do mesmo grupo compartilham este id. */
   @Column({ type: 'varchar', nullable: true })
   grupoParcela: string | null;

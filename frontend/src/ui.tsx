@@ -136,6 +136,16 @@ export const IconeLixeira = ({ className }: { className: string }) => (
   </Svg>
 );
 
+export const IconeUpload = ({ className }: { className: string }) => (
+  <Svg className={className}>
+    <path
+      d="M12 16V4m0 0L7 9m5-5l5 5M4 20h16"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
 export const IconeUsuario = ({ className }: { className: string }) => (
   <Svg className={className}>
     <path

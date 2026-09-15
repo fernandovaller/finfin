@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Categoria } from './categoria.entity';
 import { Conta } from './conta.entity';
 import { Despesa } from './despesa.entity';
@@ -299,6 +299,121 @@ export class AppService {
     const lanc = await this.apagarLancamentos(usuarioId);
     const c = await this.contas.delete({ usuarioId });
     return { ...lanc, contas: c.affected ?? 0 };
+  }
+
+  /**
+   * Importa lançamentos vindos de extrato OFX (já parseados no frontend).
+   * - `itens`: [{ fitid?, data YYYY-MM-DD, valor > 0, tipo receita|despesa, categoria?, descricao? }].
+   * - Categoria vazia usa o padrão do tipo (categoriaReceita/categoriaDespesa).
+   * - FITID repetido (já importado ou duplicado no lote) é ignorado, nunca duplicado.
+   * Tudo roda em transação.
+   */
+  async importarOfx(
+    usuarioId: number,
+    body: any,
+  ): Promise<{ receitas: number; despesas: number; ignorados: number }> {
+    const contaId = await this.assertConta(usuarioId, body?.contaId);
+    const categoriaReceita = body?.categoriaReceita?.trim?.() ?? '';
+    const categoriaDespesa = body?.categoriaDespesa?.trim?.() ?? '';
+    if (!categoriaReceita) throw new BadRequestException('Campo obrigatório: categoriaReceita');
+    if (!categoriaDespesa) throw new BadRequestException('Campo obrigatório: categoriaDespesa');
+    const formaPagamento =
+      typeof body?.formaPagamento === 'string' ? body.formaPagamento : '';
+    if (formaPagamento) {
+      const formaOk = await this.formas.findOneBy({ usuarioId, nome: formaPagamento });
+      if (!formaOk) throw new BadRequestException('Forma de pagamento não encontrada');
+    }
+    const itens = body?.itens;
+    if (!Array.isArray(itens) || itens.length === 0) {
+      throw new BadRequestException('Nenhum lançamento para importar');
+    }
+    if (itens.length > 2000) {
+      throw new BadRequestException('Limite de 2000 lançamentos por importação');
+    }
+    const norm = itens.map((it: any, i: number) => {
+      const rotulo = `Lançamento #${i + 1}`;
+      if (typeof it?.data !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(it.data)) {
+        throw new BadRequestException(`${rotulo} com data inválida`);
+      }
+      const valor = Math.round(Number(it?.valor) * 100) / 100;
+      if (!Number.isFinite(valor) || !(valor > 0)) {
+        throw new BadRequestException(`${rotulo} com valor inválido`);
+      }
+      if (it?.tipo !== 'receita' && it?.tipo !== 'despesa') {
+        throw new BadRequestException(`${rotulo} com tipo inválido`);
+      }
+      const padrao = it.tipo === 'receita' ? categoriaReceita : categoriaDespesa;
+      const categoria =
+        typeof it?.categoria === 'string' && it.categoria.trim() ? it.categoria.trim() : padrao;
+      const descricao =
+        typeof it?.descricao === 'string' ? it.descricao.trim().slice(0, 200) : '';
+      const fitid =
+        typeof it?.fitid === 'string' && it.fitid.trim()
+          ? it.fitid.trim().slice(0, 100)
+          : null;
+      return { data: it.data, valor, tipo: it.tipo as string, categoria, descricao, fitid };
+    });
+    // Toda categoria usada precisa existir no catálogo com o tipo correspondente.
+    const pares = new Map<string, string>();
+    pares.set(`receita:${categoriaReceita}`, categoriaReceita);
+    pares.set(`despesa:${categoriaDespesa}`, categoriaDespesa);
+    for (const n of norm) pares.set(`${n.tipo}:${n.categoria}`, n.categoria);
+    for (const [chave, nome] of pares) {
+      const [tipo] = chave.split(':');
+      const ok = await this.categorias.findOneBy({
+        usuarioId,
+        nome,
+        tipo: tipo as 'receita' | 'despesa',
+      });
+      if (!ok) throw new BadRequestException(`Categoria "${nome}" não encontrada (${tipo})`);
+    }
+    return this.receitas.manager.transaction(async (tx) => {
+      const fitids = [...new Set(norm.map((n) => n.fitid).filter((f): f is string => !!f))];
+      const vistos = new Set<string>();
+      if (fitids.length > 0) {
+        const [r, d] = await Promise.all([
+          tx.find(Receita, { where: { usuarioId, fitid: In(fitids) }, select: { fitid: true } }),
+          tx.find(Despesa, { where: { usuarioId, fitid: In(fitids) }, select: { fitid: true } }),
+        ]);
+        for (const x of [...r, ...d]) if (x.fitid) vistos.add(x.fitid);
+      }
+      let nReceitas = 0;
+      let nDespesas = 0;
+      let ignorados = 0;
+      for (const n of norm) {
+        if (n.fitid) {
+          if (vistos.has(n.fitid)) {
+            ignorados++;
+            continue;
+          }
+          vistos.add(n.fitid);
+        }
+        const base = {
+          data: n.data,
+          valor: n.valor,
+          categoria: n.categoria,
+          formaPagamento,
+          contaId,
+          nota: '',
+          fitid: n.fitid,
+          usuarioId,
+        };
+        if (n.tipo === 'receita') {
+          await tx.save(Receita, { ...base, origem: n.descricao || n.categoria });
+          nReceitas++;
+        } else {
+          await tx.save(Despesa, {
+            ...base,
+            descricao: n.descricao || n.categoria,
+            grupoParcela: null,
+            parcelaAtual: null,
+            parcelaTotal: null,
+          });
+          nDespesas++;
+        }
+      }
+      return { receitas: nReceitas, despesas: nDespesas, ignorados };
+    });
   }
 
   /**

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import LancamentoForm, { type LancamentoValues, type TipoLancamento } from '../LancamentoForm';
 import { api, type Despesa, type Receita } from '../api';
 import {
@@ -10,6 +11,7 @@ import {
   IconeExtrato,
   IconeLapiz,
   IconeLixeira,
+  IconeUpload,
   mesAtual,
   MesNav,
   mesLabel,
@@ -153,6 +155,13 @@ export default function Lancamentos() {
             ))}
           </select>
           <MesNav mes={mes} onChange={setMes} />
+          <Link
+            to="/lancamentos/ofx"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-bold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-800"
+          >
+            <IconeUpload className="h-4 w-4" />
+            Importar OFX
+          </Link>
         </div>
       </div>
 

@@ -9,6 +9,7 @@ import Configuracoes from './pages/Configuracoes';
 import Contas from './pages/Contas';
 import FormasPagamento from './pages/FormasPagamento';
 import Home from './pages/Home';
+import ImportarOfx from './pages/ImportarOfx';
 import Lancamentos from './pages/Lancamentos';
 import Login from './pages/Login';
 import Perfil from './pages/Perfil';
@@ -44,6 +45,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           >
             <Route index element={<Home />} />
             <Route path="lancamentos" element={<Lancamentos />} />
+            <Route path="lancamentos/ofx" element={<ImportarOfx />} />
             <Route path="relatorios" element={<Relatorios />} />
             <Route path="categorias" element={<Categorias />} />
             <Route path="contas" element={<Contas />} />

@@ -27,6 +27,10 @@ export class Receita {
   @Column({ default: '' })
   nota: string;
 
+  /** Id da transação no extrato OFX (FITID) — chave anti-duplicada na importação. */
+  @Column({ type: 'varchar', nullable: true })
+  fitid: string | null;
+
   /** Dono do lançamento. Nullable para preservar base anterior ao login. */
   @Column({ type: 'integer', nullable: true })
   usuarioId: number | null;
