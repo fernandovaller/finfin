@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -9,7 +8,7 @@ import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { CatalogoController } from './catalogo.controller';
 import { CatalogoService } from './catalogo.service';
-import { ThrottleGuard } from './throttle.guard';
+import { LimiteGuard } from './limite.guard';
 import { Categoria } from './categoria.entity';
 import { Conta } from './conta.entity';
 import { Despesa } from './despesa.entity';
@@ -20,8 +19,6 @@ import { Usuario } from './usuario.entity';
 
 @Module({
   imports: [
-    // Freio genérico: 100 req/min por IP e rota. Login/cadastro têm teto próprio.
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     TypeOrmModule.forRoot({
       type: 'better-sqlite3',
       database: 'data/finfin.sqlite',
@@ -37,7 +34,7 @@ import { Usuario } from './usuario.entity';
     AppService,
     CatalogoService,
     // Global (roda antes do AuthGuard): protege também as rotas públicas de auth.
-    { provide: APP_GUARD, useClass: ThrottleGuard },
+    { provide: APP_GUARD, useClass: LimiteGuard },
   ],
 })
 export class AppModule {}
