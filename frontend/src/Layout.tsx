@@ -9,7 +9,6 @@ import {
   IconeExtrato,
   IconeGrafico,
   IconeTag,
-  IconeUsuario,
 } from './ui';
 
 const GRUPOS = [
@@ -101,26 +100,6 @@ export default function Layout() {
         </div>
         <Navegacao />
         <div className="mt-auto space-y-3 px-5 pb-5">
-          <NavLink
-            to="/perfil"
-            className={({ isActive }) =>
-              `relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                isActive
-                  ? 'bg-slate-800 text-white'
-                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-emerald-400" />
-                )}
-                <IconeUsuario className="h-5 w-5 shrink-0" />
-                Perfil
-              </>
-            )}
-          </NavLink>
           {usuario && (
             <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-800 px-3 py-2">
               <Link to="/perfil" className="flex min-w-0 flex-1 items-center gap-2 rounded-lg">
@@ -165,27 +144,6 @@ export default function Layout() {
             </div>
             <Navegacao onNavegar={() => setAberto(false)} />
             <div className="mt-auto space-y-3 px-5 pb-5">
-              <NavLink
-                to="/perfil"
-                onClick={() => setAberto(false)}
-                className={({ isActive }) =>
-                  `relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                    isActive
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    {isActive && (
-                      <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-emerald-400" />
-                    )}
-                    <IconeUsuario className="h-5 w-5 shrink-0" />
-                    Perfil
-                  </>
-                )}
-              </NavLink>
               {usuario && (
                 <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-800 px-3 py-2">
                   <Link to="/perfil" onClick={() => setAberto(false)} className="flex min-w-0 flex-1 items-center gap-2 rounded-lg">
