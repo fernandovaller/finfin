@@ -357,34 +357,17 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
         <Modal titulo="Filtros do relatório" onFechar={() => setModalFiltros(false)} wide>
           <div className="space-y-4">
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3">
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
             Período
             <select value={preset} onChange={(e) => setPreset(e.target.value as Preset)} className={`mt-1 w-full ${inputCls}`}>
-              <option value="mes">Mês único (+6 anteriores na evolução)</option>
+              <option value="mes">Mês único</option>
               <option value="6m">Últimos 6 meses</option>
               <option value="12m">Últimos 12 meses</option>
               <option value="ano">Ano fechado</option>
-              <option value="intervalo">Intervalo personalizado</option>
+              <option value="intervalo">Intervalo</option>
             </select>
           </label>
-          {preset === 'ano' ? (
-            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-              Ano
-              <input value={ano} onChange={(e) => setAno(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder="2026" className={`mt-1 w-full ${inputCls}`} />
-            </label>
-          ) : preset === 'intervalo' ? (
-            <>
-              <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-                Início
-                <input type="month" value={ini} onChange={(e) => setIni(e.target.value)} className={`mt-1 w-full ${inputCls} [color-scheme:light] dark:[color-scheme:dark]`} />
-              </label>
-              <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-                Fim
-                <input type="month" value={fim} onChange={(e) => setFim(e.target.value)} className={`mt-1 w-full ${inputCls} [color-scheme:light] dark:[color-scheme:dark]`} />
-              </label>
-            </>
-          ) : null}
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
             Conta
             <select
@@ -392,7 +375,7 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
               onChange={(e) => setContaFiltro(e.target.value === '' ? '' : Number(e.target.value))}
               className={`mt-1 w-full ${inputCls}`}
             >
-              <option value="">Todas as contas</option>
+              <option value="">Todas</option>
               {contas.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.icone ? `${c.icone} ` : ''}{c.nome}
@@ -400,29 +383,48 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
               ))}
             </select>
           </label>
-          <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-            Busca
-            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Origem, descrição, nota…" className={`mt-1 w-full ${inputCls}`} />
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-              Valor mín
-              <input value={min} onChange={(e) => setMin(e.target.value.replace(/[^\d.,]/g, '').slice(0, 12))} inputMode="decimal" placeholder="0" className={`mt-1 w-full ${inputCls} tabular-nums`} />
-            </label>
-            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-              Valor máx
-              <input value={max} onChange={(e) => setMax(e.target.value.replace(/[^\d.,]/g, '').slice(0, 12))} inputMode="decimal" placeholder="∞" className={`mt-1 w-full ${inputCls} tabular-nums`} />
-            </label>
-          </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-3">
+        {preset === 'ano' ? (
+          <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
+            Ano
+            <input value={ano} onChange={(e) => setAno(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder="2026" className={`mt-1 w-full ${inputCls}`} />
+          </label>
+        ) : preset === 'intervalo' ? (
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
+              Início
+              <input type="month" value={ini} onChange={(e) => setIni(e.target.value)} className={`mt-1 w-full ${inputCls} [color-scheme:light] dark:[color-scheme:dark]`} />
+            </label>
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
+              Fim
+              <input type="month" value={fim} onChange={(e) => setFim(e.target.value)} className={`mt-1 w-full ${inputCls} [color-scheme:light] dark:[color-scheme:dark]`} />
+            </label>
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-8 gap-3">
+          <label className="col-span-4 block text-sm font-medium text-slate-600 dark:text-slate-400">
+            Busca
+            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Origem, d…" className={`mt-1 w-full ${inputCls}`} />
+          </label>
+          <label className="col-span-2 block text-sm font-medium text-slate-600 dark:text-slate-400">
+            Valor mín
+            <input value={min} onChange={(e) => setMin(e.target.value.replace(/[^\d.,]/g, '').slice(0, 12))} inputMode="decimal" placeholder="0" className={`mt-1 w-full ${inputCls} tabular-nums`} />
+          </label>
+          <label className="col-span-2 block text-sm font-medium text-slate-600 dark:text-slate-400">
+            Valor máx
+            <input value={max} onChange={(e) => setMax(e.target.value.replace(/[^\d.,]/g, '').slice(0, 12))} inputMode="decimal" placeholder="∞" className={`mt-1 w-full ${inputCls} tabular-nums`} />
+          </label>
+        </div>
+
+        <div className="space-y-4">
           <div>
             <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Categorias de receita {catRec.length > 0 && `(${catRec.length})`}</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {catsRec.length === 0 && <span className="text-xs text-slate-400">Nenhuma cadastrada</span>}
+            <div className="mt-2 flex flex-wrap gap-2">
+              {catsRec.length === 0 && <span className="text-xs text-slate-400">Nenhuma</span>}
               {catsRec.map((c) => (
-                <button key={c} type="button" onClick={() => setCatRec(toggle(catRec, c))} aria-pressed={catRec.includes(c)} className={chip(catRec.includes(c))}>
+                <button key={c} type="button" onClick={() => setCatRec(toggle(catRec, c))} aria-pressed={catRec.includes(c)} className={`${chip(catRec.includes(c))} shrink-0 whitespace-nowrap`}>
                   {c}
                 </button>
               ))}
@@ -430,10 +432,10 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
           </div>
           <div>
             <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Categorias de despesa {catDes.length > 0 && `(${catDes.length})`}</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {catsDes.length === 0 && <span className="text-xs text-slate-400">Nenhuma cadastrada</span>}
+            <div className="mt-2 flex flex-wrap gap-2">
+              {catsDes.length === 0 && <span className="text-xs text-slate-400">Nenhuma</span>}
               {catsDes.map((c) => (
-                <button key={c} type="button" onClick={() => setCatDes(toggle(catDes, c))} aria-pressed={catDes.includes(c)} className={chip(catDes.includes(c))}>
+                <button key={c} type="button" onClick={() => setCatDes(toggle(catDes, c))} aria-pressed={catDes.includes(c)} className={`${chip(catDes.includes(c))} shrink-0 whitespace-nowrap`}>
                   {c}
                 </button>
               ))}
@@ -441,14 +443,14 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
           </div>
           <div>
             <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Formas de pagamento {formaSel.length > 0 && `(${formaSel.length})`}</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {formas.length === 0 && <span className="text-xs text-slate-400">Nenhuma cadastrada</span>}
+            <div className="mt-2 flex flex-wrap gap-2">
+              {formas.length === 0 && <span className="text-xs text-slate-400">Nenhuma</span>}
               {formas.map((f) => (
-                <button key={f} type="button" onClick={() => setFormaSel(toggle(formaSel, f))} aria-pressed={formaSel.includes(f)} className={chip(formaSel.includes(f))}>
+                <button key={f} type="button" onClick={() => setFormaSel(toggle(formaSel, f))} aria-pressed={formaSel.includes(f)} className={`${chip(formaSel.includes(f))} shrink-0 whitespace-nowrap`}>
                   {f}
                 </button>
               ))}
-              <button type="button" onClick={() => setFormaSel(toggle(formaSel, ''))} aria-pressed={formaSel.includes('')} className={chip(formaSel.includes(''))}>
+              <button type="button" onClick={() => setFormaSel(toggle(formaSel, ''))} aria-pressed={formaSel.includes('')} className={`${chip(formaSel.includes(''))} shrink-0 whitespace-nowrap`}>
                 Não informada
               </button>
             </div>
