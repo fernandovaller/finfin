@@ -11,6 +11,23 @@ interface Contagem {
   formasPagamento: number;
 }
 
+interface StatusIntegracoes {
+  email: {
+    configurado: boolean;
+    origem: 'conta' | 'ambiente' | null;
+    mascarada: string | null;
+  };
+}
+
+type Aba = 'geral' | 'backup' | 'email' | 'perigo';
+
+const ABAS: Array<{ valor: Aba; rotulo: string }> = [
+  { valor: 'geral', rotulo: 'Geral' },
+  { valor: 'backup', rotulo: 'Backup' },
+  { valor: 'email', rotulo: 'E-mail' },
+  { valor: 'perigo', rotulo: 'Zona de perigo' },
+];
+
 function baixar(filename: string, conteudo: string, tipo: string) {
   const blob = new Blob([conteudo], { type: `${tipo};charset=utf-8` });
   const url = URL.createObjectURL(blob);
@@ -34,11 +51,21 @@ export default function Configuracoes() {
   const [sincronizadoEm, setSincronizadoEm] = useState<Date | null>(null);
   const [perigo, setPerigo] = useState<Perigo>(null);
   const [confirmacao, setConfirmacao] = useState('');
+  const [aba, setAba] = useState<Aba>('geral');
+  const [integracao, setIntegracao] = useState<StatusIntegracoes | null>(null);
+  const [chave, setChave] = useState('');
+  const [mostrarChave, setMostrarChave] = useState(false);
+  const [salvandoEmail, setSalvandoEmail] = useState(false);
 
   async function recarregar() {
     try {
       setErro('');
-      setContagem(await api<Contagem>('/api/contagem'));
+      const [contagemAtual, integracaoAtual] = await Promise.all([
+        api<Contagem>('/api/contagem'),
+        api<StatusIntegracoes>('/api/auth/integracoes'),
+      ]);
+      setContagem(contagemAtual);
+      setIntegracao(integracaoAtual);
       setSincronizadoEm(new Date());
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Falha ao carregar dados');
@@ -106,6 +133,45 @@ export default function Configuracoes() {
       setErro(e instanceof Error ? e.message : 'Falha ao restaurar');
     } finally {
       setTrabalhando(false);
+    }
+  }
+
+  async function salvarChave() {
+    setSalvandoEmail(true);
+    try {
+      setErro('');
+      setOk('');
+      const r = await api<StatusIntegracoes>('/api/auth/integracoes', {
+        method: 'PUT',
+        body: JSON.stringify({ resendApiKey: chave }),
+      });
+      setIntegracao(r);
+      setChave('');
+      setMostrarChave(false);
+      setOk('Chave do Resend salva.');
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falha ao salvar chave');
+    } finally {
+      setSalvandoEmail(false);
+    }
+  }
+
+  async function removerChave() {
+    setSalvandoEmail(true);
+    try {
+      setErro('');
+      setOk('');
+      const r = await api<StatusIntegracoes>('/api/auth/integracoes', {
+        method: 'PUT',
+        body: JSON.stringify({ resendApiKey: null }),
+      });
+      setIntegracao(r);
+      setChave('');
+      setOk('Chave removida da sua conta.');
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falha ao remover chave');
+    } finally {
+      setSalvandoEmail(false);
     }
   }
 
@@ -200,6 +266,31 @@ export default function Configuracoes() {
         </p>
       )}
 
+      <nav aria-label="Seções de configurações" role="tablist" className="grid grid-cols-4 gap-1 rounded-2xl bg-white dark:bg-slate-900 p-1.5 text-sm font-semibold shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+        {ABAS.map((a) => (
+          <button
+            key={a.valor}
+            type="button"
+            role="tab"
+            aria-selected={aba === a.valor}
+            onClick={() => setAba(a.valor)}
+            className={`rounded-xl px-2 py-2.5 transition ${
+              aba === a.valor
+                ? a.valor === 'perigo'
+                  ? 'bg-red-600 text-white shadow'
+                  : 'bg-slate-900 text-white shadow'
+                : a.valor === 'perigo'
+                  ? 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50'
+                  : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
+          >
+            {a.rotulo}
+          </button>
+        ))}
+      </nav>
+
+      {aba === 'geral' && (
+        <div role="tabpanel" className="space-y-6">
       <section aria-label="Seus dados" className={card}>
         <h2 className="text-base font-bold">Seus dados</h2>
         {carregando ? (
@@ -265,7 +356,11 @@ export default function Configuracoes() {
           em largura limitada; “Fluida” usa toda a tela.
         </p>
       </section>
+        </div>
+      )}
 
+      {aba === 'backup' && (
+        <div role="tabpanel" className="space-y-6">
       <section aria-label="Exportar dados" className={card}>
         <h2 className="text-base font-bold">Exportar dados</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
@@ -347,7 +442,98 @@ export default function Configuracoes() {
           </button>
         </div>
       </section>
+        </div>
+      )}
 
+      {aba === 'email' && (
+        <div role="tabpanel" className="space-y-6">
+      <section aria-label="E-mail" className={card}>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-base font-bold">E-mail (Resend)</h2>
+          {integracao ? (
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset ${
+              integracao.email.configurado
+                ? 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900'
+                : 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-900'
+            }`}>
+              {integracao.email.configurado
+                ? `Ativo · ${integracao.email.mascarada}`
+                : 'Não configurado'}
+            </span>
+          ) : (
+            <span className="text-xs text-slate-400 dark:text-slate-500">Carregando…</span>
+          )}
+        </div>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
+          Ativa os e-mails de recuperação de senha. Para conseguir a chave:
+        </p>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-400 dark:text-slate-500">
+          <li>
+            Crie a conta grátis em{' '}
+            <a href="https://resend.com" target="_blank" rel="noreferrer" className="font-semibold text-sky-700 underline dark:text-sky-400">
+              resend.com
+            </a>{' '}
+            (plano grátis: 100 e-mails/dia).
+          </li>
+          <li>Em <strong>API Keys</strong>, crie uma chave com permissão de envio (<em>Sending access</em>).</li>
+          <li>Cole a chave abaixo (começa com <code className="rounded bg-slate-100 dark:bg-slate-800 px-1 font-mono text-xs">re_</code>) e salve.</li>
+        </ol>
+        <div className="mt-4 space-y-3">
+          <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
+            Chave da API
+            <span className="mt-1 flex gap-2">
+              <input
+                type={mostrarChave ? 'text' : 'password'}
+                value={chave}
+                onChange={(e) => setChave(e.target.value)}
+                placeholder={integracao?.email.origem === 'ambiente' ? 'Usando chave do servidor (.env)' : 're_…'}
+                autoComplete="off"
+                spellCheck={false}
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 font-mono text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+              />
+              <button
+                type="button"
+                onClick={() => setMostrarChave((v) => !v)}
+                aria-pressed={mostrarChave}
+                className={btnSec}
+              >
+                {mostrarChave ? 'Ocultar' : 'Mostrar'}
+              </button>
+            </span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={salvarChave}
+              disabled={salvandoEmail || !chave.trim()}
+              className={btnSec}
+            >
+              {salvandoEmail ? 'Salvando…' : 'Salvar chave'}
+            </button>
+            {integracao?.email.origem === 'conta' && (
+              <button
+                type="button"
+                onClick={removerChave}
+                disabled={salvandoEmail}
+                className={btnSec}
+              >
+                Remover
+              </button>
+            )}
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+          A chave fica salva só na sua conta e nunca é exibida inteira de novo.
+          {integracao?.email.origem === 'ambiente'
+            ? ' Há uma chave global no servidor (.env); a salva aqui vale só para você.'
+            : ''}
+        </p>
+      </section>
+        </div>
+      )}
+
+      {aba === 'perigo' && (
+        <div role="tabpanel" className="space-y-6">
       <section aria-label="Zona de perigo" className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-red-200">
         <h2 className="text-base font-bold text-red-700 dark:text-red-400">Zona de perigo</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
@@ -382,6 +568,8 @@ export default function Configuracoes() {
           </button>
         </div>
       </section>
+        </div>
+      )}
 
       <StatusSync carregando={carregando} erro={erro} sincronizadoEm={sincronizadoEm} />
 

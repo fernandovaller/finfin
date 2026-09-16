@@ -48,4 +48,16 @@ export class AuthController {
     const token = (req.headers?.authorization ?? '').replace(/^Bearer\s+/i, '').trim();
     return this.auth.trocarSenha(req.usuario.id, body, token);
   }
+
+  @Get('integracoes')
+  @UseGuards(AuthGuard)
+  integracoes(@Req() req: any) {
+    return this.auth.obterIntegracoes(req.usuario.id);
+  }
+
+  @Put('integracoes')
+  @UseGuards(AuthGuard)
+  salvarIntegracoes(@Req() req: any, @Body() body: any) {
+    return this.auth.salvarIntegracoes(req.usuario.id, body);
+  }
 }

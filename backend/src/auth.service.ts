@@ -59,6 +59,23 @@ export interface UsuarioPublico {
   avatar: string | null;
 }
 
+export interface StatusIntegracoes {
+  email: {
+    /** Há chave efetiva (da conta ou do servidor via RESEND_API_KEY). */
+    configurado: boolean;
+    /** De onde vem a chave efetiva. */
+    origem: 'conta' | 'ambiente' | null;
+    /** Últimos 4 caracteres da chave efetiva (nunca a chave inteira). */
+    mascarada: string | null;
+  };
+}
+
+/** Últimos 4 caracteres visíveis — o bastante para reconhecer, pouco para vazar. */
+function mascararChave(chave: string): string {
+  const limpa = chave.trim();
+  return limpa.length <= 8 ? '••••' : `${limpa.slice(0, 3)}…${limpa.slice(-4)}`;
+}
+
 function publico(usuario: Usuario): UsuarioPublico {
   return { id: usuario.id, nome: usuario.nome, email: usuario.email, avatar: usuario.avatar ?? null };
 }
@@ -213,6 +230,49 @@ export class AuthService {
       await this.sessoes.delete({ usuarioId });
     }
     return { usuario: publico(salvo) };
+  }
+
+  /**
+   * Estado das integrações do dono. A chave do Resend nunca volta inteira:
+   * só um mascarado para reconhecer qual está ativa.
+   */
+  async obterIntegracoes(usuarioId: number): Promise<StatusIntegracoes> {
+    const usuario = await this.usuarios.findOneBy({ id: usuarioId });
+    if (!usuario) throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
+    const daConta = usuario.resendApiKey?.trim() || null;
+    const doAmbiente = process.env.RESEND_API_KEY?.trim() || null;
+    const efetiva = daConta ?? doAmbiente;
+    return {
+      email: {
+        configurado: !!efetiva,
+        origem: daConta ? 'conta' : doAmbiente ? 'ambiente' : null,
+        mascarada: efetiva ? mascararChave(efetiva) : null,
+      },
+    };
+  }
+
+  /**
+   * Salva (ou limpa, com string vazia/null) a chave do Resend da conta.
+   * Vale só para o dono; sem chave na conta, vale a do servidor (RESEND_API_KEY).
+   */
+  async salvarIntegracoes(usuarioId: number, body: any): Promise<StatusIntegracoes> {
+    const usuario = await this.usuarios.findOneBy({ id: usuarioId });
+    if (!usuario) throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
+    if (body?.resendApiKey !== undefined) {
+      const chave = body.resendApiKey === null ? '' : String(body.resendApiKey).trim();
+      if (chave && (chave.length < 10 || chave.length > 500)) {
+        throw new BadRequestException('Chave do Resend inválida');
+      }
+      usuario.resendApiKey = chave || null;
+      await this.usuarios.save(usuario);
+    }
+    return this.obterIntegracoes(usuarioId);
+  }
+
+  /** Chave efetiva para envio (recuperação de senha etc.): conta primeiro, servidor depois. */
+  async chaveResendEfetiva(usuarioId: number): Promise<string | null> {
+    const usuario = await this.usuarios.findOneBy({ id: usuarioId });
+    return usuario?.resendApiKey?.trim() || process.env.RESEND_API_KEY?.trim() || null;
   }
 
   /** Resolve o dono a partir do token Bearer; null quando ausente/inválido/expirado. */

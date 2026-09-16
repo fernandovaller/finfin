@@ -18,6 +18,10 @@ export class Usuario {
   @Column({ type: 'text', nullable: true })
   avatar: string | null;
 
+  /** Chave da API do Resend (envio de e-mails, ex.: recuperação de senha). Null = não configurada. */
+  @Column({ type: 'text', nullable: true })
+  resendApiKey: string | null;
+
   @Column({ default: () => 'CURRENT_TIMESTAMP' })
   criadoEm: string;
 }

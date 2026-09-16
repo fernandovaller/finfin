@@ -17,6 +17,7 @@ import { Receita } from './receita.entity';
 import { Sessao } from './sessao.entity';
 import { Usuario } from './usuario.entity';
 import { CriacaoInicial1789505184849 } from './migrations/1789505184849-criacao-inicial';
+import { ResendApiKey1789558563730 } from './migrations/1789558563730-resend-api-key';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { CriacaoInicial1789505184849 } from './migrations/1789505184849-criacao-
       database: 'data/finfin.sqlite',
       entities: [Receita, Despesa, Categoria, FormaPagamento, Conta, Usuario, Sessao],
       // As migrations são o único dono do schema — nunca reativar `synchronize`.
-      migrations: [CriacaoInicial1789505184849],
+      migrations: [CriacaoInicial1789505184849, ResendApiKey1789558563730],
       migrationsRun: true, // aplica migrations pendentes no boot (banco novo ou existente)
     }),
     TypeOrmModule.forFeature([Receita, Despesa, Categoria, FormaPagamento, Conta, Usuario, Sessao]),
