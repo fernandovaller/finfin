@@ -60,9 +60,12 @@ Abra http://localhost:3000 no navegador. O nginx do frontend faz proxy de
 | Comando                          | O que faz                                  |
 | -------------------------------- | ------------------------------------------ |
 | `docker compose up --build`      | constrói as imagens e sobe os 2 serviços   |
-| `docker compose up -d`           | sobe em segundo plano (após o 1º build)    |
+| `docker compose up -d --build`   | igual ao anterior, em segundo plano        |
 | `docker compose logs -f`         | acompanha os logs dos 2 serviços           |
 | `docker compose down`            | para e remove os contêineres (mantém dados)|
+
+> **Mudou o código?** Repita com `--build`. Sem ele o Compose reaproveita a
+> imagem antiga e o contêiner continua rodando a versão anterior.
 
 Os dados do SQLite ficam no volume `finfin-data` (`/app/data` no contêiner do
 backend). Para recomeçar do zero, apague o volume:
