@@ -5,14 +5,16 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { randomBytes, scrypt as scryptCb, timingSafeEqual } from 'crypto';
+import { createHash, randomBytes, scrypt as scryptCb, timingSafeEqual } from 'crypto';
+import { Resend } from 'resend';
 import { promisify } from 'util';
-import { LessThan, Not, Repository } from 'typeorm';
+import { IsNull, LessThan, Not, Repository } from 'typeorm';
 import { Categoria, TipoCategoria } from './categoria.entity';
 import { Conta } from './conta.entity';
 import { Despesa } from './despesa.entity';
 import { FormaPagamento } from './forma-pagamento.entity';
 import { Receita } from './receita.entity';
+import { RecuperacaoSenha } from './recuperacao-senha.entity';
 import { Sessao } from './sessao.entity';
 import { Usuario } from './usuario.entity';
 
@@ -46,6 +48,9 @@ const SEED_FORMAS: string[] = [
 
 /** Sessão válida por 7 dias. */
 const SESSAO_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Link de recuperação vale por 1 hora e só pode ser usado uma vez. */
+const RECUPERACAO_TTL_MS = 60 * 60 * 1000;
 
 export interface SessaoCriada {
   usuario: UsuarioPublico;
@@ -101,6 +106,26 @@ function normalizaEmail(email: unknown): string {
     .toLowerCase();
 }
 
+function escapeHtml(texto: string): string {
+  return texto.replace(/[&<>"']/g, (c) => {
+    switch (c) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      default: return '&#39;';
+    }
+  });
+}
+
+/** Base do link enviado por e-mail (HashRouter: tudo após `#/` é rota do frontend). */
+function urlFrontend(): string {
+  const direta = process.env.FRONTEND_URL?.trim().replace(/\/+$/, '');
+  if (direta) return direta;
+  const porta = Number(process.env.FRONTEND_PORT ?? 3000) || 3000;
+  return `http://localhost:${porta}`;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -118,6 +143,8 @@ export class AuthService {
     private readonly despesas: Repository<Despesa>,
     @InjectRepository(Conta)
     private readonly contas: Repository<Conta>,
+    @InjectRepository(RecuperacaoSenha)
+    private readonly recuperacoes: Repository<RecuperacaoSenha>,
   ) {}
 
   /** Boot: remove sessões expiradas acumuladas no banco. */
@@ -275,6 +302,68 @@ export class AuthService {
     return usuario?.resendApiKey?.trim() || process.env.RESEND_API_KEY?.trim() || null;
   }
 
+  /**
+   * Pede o e-mail de recuperação. Resposta sempre genérica: não revela se o
+   * e-mail é cadastrado nem se o envio funcionou (anti-enumeração). O token
+   * puro só existe no link — no banco fica só o hash SHA-256.
+   */
+  async solicitarRecuperacao(body: any): Promise<{ ok: true }> {
+    // Limpeza oportunista: pedido expirado não serve para nada.
+    await this.recuperacoes.delete({ expiraEm: LessThan(new Date().toISOString()) });
+    const email = normalizaEmail(body?.email);
+    const usuario = email ? await this.usuarios.findOneBy({ email }) : null;
+    if (!usuario) return { ok: true };
+    const chave = await this.chaveResendEfetiva(usuario.id);
+    if (!chave) {
+      console.warn(`[recuperacao] sem chave do Resend (usuário ${usuario.id}) — e-mail não enviado`);
+      return { ok: true };
+    }
+    // Pedido novo invalida os anteriores ainda pendentes: só o último link vale.
+    await this.recuperacoes.delete({ usuarioId: usuario.id, usadoEm: IsNull() });
+    const token = randomBytes(32).toString('hex');
+    await this.recuperacoes.save({
+      usuarioId: usuario.id,
+      tokenHash: createHash('sha256').update(token).digest('hex'),
+      expiraEm: new Date(Date.now() + RECUPERACAO_TTL_MS).toISOString(),
+      usadoEm: null,
+    });
+    const link = `${urlFrontend()}/#/redefinir-senha?token=${token}`;
+    try {
+      await this.enviarEmailRecuperacao(chave, usuario.email, usuario.nome, link);
+    } catch (e) {
+      console.error(
+        `[recuperacao] falha no envio (usuário ${usuario.id}):`,
+        e instanceof Error ? e.message : e,
+      );
+    }
+    return { ok: true };
+  }
+
+  /** Troca a senha via token do e-mail; uso único, derruba todas as sessões. */
+  async redefinirSenha(body: any): Promise<{ ok: true }> {
+    const token = typeof body?.token === 'string' ? body.token.trim() : '';
+    const nova = body?.novaSenha;
+    if (!token) throw new BadRequestException('Token inválido ou expirado');
+    if (typeof nova !== 'string' || nova.length < 8 || nova.length > 128) {
+      throw new BadRequestException('A nova senha deve ter de 8 a 128 caracteres');
+    }
+    const pedido = await this.recuperacoes.findOneBy({
+      tokenHash: createHash('sha256').update(token).digest('hex'),
+    });
+    if (!pedido || pedido.usadoEm || new Date(pedido.expiraEm).getTime() < Date.now()) {
+      throw new BadRequestException('Token inválido ou expirado');
+    }
+    const usuario = await this.usuarios.findOneBy({ id: pedido.usuarioId });
+    if (!usuario) throw new BadRequestException('Token inválido ou expirado');
+    usuario.senhaHash = await hashSenha(nova);
+    await this.usuarios.save(usuario);
+    pedido.usadoEm = new Date().toISOString();
+    await this.recuperacoes.save(pedido);
+    // Reset prova acesso ao e-mail, não à senha antiga: derruba tudo, sem exceção.
+    await this.sessoes.delete({ usuarioId: usuario.id });
+    return { ok: true };
+  }
+
   /** Resolve o dono a partir do token Bearer; null quando ausente/inválido/expirado. */
   async donoDoToken(cabecalho: string | undefined): Promise<Usuario | null> {
     const token = (cabecalho ?? '').replace(/^Bearer\s+/i, '').trim();
@@ -285,6 +374,34 @@ export class AuthService {
       return null;
     }
     return this.usuarios.findOneBy({ id: sessao.usuarioId });
+  }
+
+  private async enviarEmailRecuperacao(
+    chave: string,
+    para: string,
+    nome: string,
+    link: string,
+  ): Promise<void> {
+    // Sem domínio próprio verificado, o Resend só entrega para o e-mail da
+    // conta Resend — defina EMAIL_REMETENTE com domínio verificado em produção.
+    const remetente = process.env.EMAIL_REMETENTE?.trim() || 'FinFin <onboarding@resend.dev>';
+    const resend = new Resend(chave);
+    const { error } = await resend.emails.send({
+      from: remetente,
+      to: para,
+      subject: 'Recupere sua senha do FinFin',
+      text:
+        `Olá, ${nome}!\n\n` +
+        `Pediu para redefinir sua senha do FinFin? Abra o link (vale por 1 hora, uso único):\n\n${link}\n\n` +
+        `Se não foi você, ignore — sua senha continua a mesma.`,
+      html:
+        `<p>Olá, ${escapeHtml(nome)}!</p>` +
+        `<p>Pediu para redefinir sua senha do FinFin? ` +
+        `<a href="${link}">Clique aqui para criar uma nova senha</a> ` +
+        `(vale por 1 hora, uso único).</p>` +
+        `<p>Se não foi você, ignore — sua senha continua a mesma.</p>`,
+    });
+    if (error) throw new Error(error.message);
   }
 
   private async abrirSessao(usuario: Usuario): Promise<SessaoCriada> {

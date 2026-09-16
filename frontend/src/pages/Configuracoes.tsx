@@ -478,6 +478,9 @@ export default function Configuracoes() {
           <li>Em <strong>API Keys</strong>, crie uma chave com permissão de envio (<em>Sending access</em>).</li>
           <li>Cole a chave abaixo (começa com <code className="rounded bg-slate-100 dark:bg-slate-800 px-1 font-mono text-xs">re_</code>) e salve.</li>
         </ol>
+        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+          Sem domínio próprio verificado no Resend, os e-mails só chegam ao e-mail da sua conta Resend.
+        </p>
         <div className="mt-4 space-y-3">
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
             Chave da API

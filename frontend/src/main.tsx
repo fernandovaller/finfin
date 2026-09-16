@@ -13,6 +13,8 @@ import ImportarOfx from './pages/ImportarOfx';
 import Lancamentos from './pages/Lancamentos';
 import Login from './pages/Login';
 import Perfil from './pages/Perfil';
+import RecuperarSenha from './pages/RecuperarSenha';
+import RedefinirSenha from './pages/RedefinirSenha';
 import Relatorios from './pages/Relatorios';
 import './index.css';
 
@@ -36,6 +38,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <HashRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/recuperar-senha" element={<RecuperarSenha />} />
+          <Route path="/redefinir-senha" element={<RedefinirSenha />} />
           <Route
             element={
               <RotaProtegida>

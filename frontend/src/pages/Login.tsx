@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { AlertaErro } from '../ui';
 
@@ -130,6 +130,14 @@ export default function Login() {
               {enviando ? 'Aguarde…' : modo === 'entrar' ? 'Entrar' : 'Criar conta'}
             </button>
           </form>
+          {modo === 'entrar' && (
+            <Link
+              to="/recuperar-senha"
+              className="mt-3 block text-center text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+            >
+              Esqueci a senha
+            </Link>
+          )}
         </div>
       </div>
     </main>

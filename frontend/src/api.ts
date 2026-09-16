@@ -149,3 +149,17 @@ export function trocarSenha(senhaAtual: string, novaSenha: string): Promise<{ us
     body: JSON.stringify({ senhaAtual, novaSenha }),
   });
 }
+
+export function recuperarSenha(email: string): Promise<{ ok: boolean }> {
+  return api<{ ok: boolean }>('/api/auth/recuperar-senha', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function redefinirSenha(token: string, novaSenha: string): Promise<{ ok: boolean }> {
+  return api<{ ok: boolean }>('/api/auth/redefinir-senha', {
+    method: 'POST',
+    body: JSON.stringify({ token, novaSenha }),
+  });
+}
