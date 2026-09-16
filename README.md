@@ -83,10 +83,14 @@ Abra http://localhost:3000 no navegador. O nginx do frontend faz proxy de
 > imagem antiga e o contêiner continua rodando a versão anterior.
 
 Os dados do SQLite ficam no volume `finfin-data` (`/app/data` no contêiner do
-backend). Para recomeçar do zero, apague o volume:
+backend). O `docker compose down` normal é seguro: remove só os contêineres e
+**mantém seus lançamentos**.
+
+> **Atenção:** `docker compose down -v` apaga o volume junto e **remove todos
+> os lançamentos**. Use somente para recomeçar do zero.
 
 ```sh
-docker compose down -v   # CUIDADO: apaga todos os lançamentos
+docker compose down -v   # APAGA todos os lançamentos (remove o volume finfin-data)
 ```
 
 ## API
