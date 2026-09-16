@@ -19,6 +19,13 @@ interface StatusIntegracoes {
   };
 }
 
+interface StatusDemo {
+  existe: boolean;
+  contas: number;
+  receitas: number;
+  despesas: number;
+}
+
 type Aba = 'geral' | 'backup' | 'email' | 'perigo';
 
 const ABAS: Array<{ valor: Aba; rotulo: string }> = [
@@ -53,6 +60,8 @@ export default function Configuracoes() {
   const [confirmacao, setConfirmacao] = useState('');
   const [aba, setAba] = useState<Aba>('geral');
   const [integracao, setIntegracao] = useState<StatusIntegracoes | null>(null);
+  const [demo, setDemo] = useState<StatusDemo | null>(null);
+  const [confirmarDemo, setConfirmarDemo] = useState(false);
   const [chave, setChave] = useState('');
   const [mostrarChave, setMostrarChave] = useState(false);
   const [salvandoEmail, setSalvandoEmail] = useState(false);
@@ -60,12 +69,14 @@ export default function Configuracoes() {
   async function recarregar() {
     try {
       setErro('');
-      const [contagemAtual, integracaoAtual] = await Promise.all([
+      const [contagemAtual, integracaoAtual, demoAtual] = await Promise.all([
         api<Contagem>('/api/contagem'),
         api<StatusIntegracoes>('/api/auth/integracoes'),
+        api<StatusDemo>('/api/dados/demonstracao'),
       ]);
       setContagem(contagemAtual);
       setIntegracao(integracaoAtual);
+      setDemo(demoAtual);
       setSincronizadoEm(new Date());
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Falha ao carregar dados');
@@ -131,6 +142,50 @@ export default function Configuracoes() {
       await recarregar();
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Falha ao restaurar');
+    } finally {
+      setTrabalhando(false);
+    }
+  }
+
+  async function gerarDemo() {
+    setTrabalhando(true);
+    try {
+      setErro('');
+      setOk('');
+      const r = await api<{ contas: number; receitas: number; despesas: number }>(
+        '/api/dados/demonstracao',
+        { method: 'POST' },
+      );
+      setOk(
+        `Demonstração criada: ${r.contas} conta(s), ${r.receitas} receita(s), ${r.despesas} despesa(s) em 6 meses.`,
+      );
+      await recarregar();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falha ao gerar demonstração');
+    } finally {
+      setTrabalhando(false);
+    }
+  }
+
+  async function removerDemo() {
+    setTrabalhando(true);
+    try {
+      setErro('');
+      setOk('');
+      const r = await api<{ contas: number; receitas: number; despesas: number }>(
+        '/api/dados/demonstracao',
+        { method: 'DELETE' },
+      );
+      const total = r.contas + r.receitas + r.despesas;
+      setOk(
+        total === 0
+          ? 'Nenhum dado de demonstração para remover.'
+          : `Demonstração removida: ${r.receitas} receita(s), ${r.despesas} despesa(s), ${r.contas} conta(s). Seus dados reais foram mantidos.`,
+      );
+      setConfirmarDemo(false);
+      await recarregar();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falha ao remover demonstração');
     } finally {
       setTrabalhando(false);
     }
@@ -361,6 +416,39 @@ export default function Configuracoes() {
 
       {aba === 'backup' && (
         <div role="tabpanel" className="space-y-6">
+      <section aria-label="Demonstração" className={card}>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-base font-bold">Demonstração</h2>
+          {demo && (
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset ${
+              demo.existe
+                ? 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900'
+                : 'bg-slate-100 text-slate-500 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700'
+            }`}>
+              {demo.existe
+                ? `Ativa · ${demo.contas} conta(s), ${demo.receitas + demo.despesas} lançamento(s)`
+                : 'Não gerada'}
+            </span>
+          )}
+        </div>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
+          Cria 3 contas (Banco, Carteira e Cartão Demo) com 6 meses de lançamentos em todas as
+          categorias — ideal para explorar relatórios. A remoção apaga só o demo, sem tocar nos
+          seus dados.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {!demo?.existe ? (
+            <button type="button" onClick={gerarDemo} disabled={trabalhando} className={btnSec}>
+              {trabalhando ? 'Gerando…' : 'Gerar demonstração'}
+            </button>
+          ) : (
+            <button type="button" onClick={() => setConfirmarDemo(true)} disabled={trabalhando} className={btnSec}>
+              Remover demonstração
+            </button>
+          )}
+        </div>
+      </section>
+
       <section aria-label="Exportar dados" className={card}>
         <h2 className="text-base font-bold">Exportar dados</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
@@ -601,6 +689,32 @@ export default function Configuracoes() {
             <button
               type="button"
               onClick={() => { setPerigo(null); setConfirmacao(''); }}
+              className="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+            >
+              Cancelar
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {confirmarDemo && (
+        <Modal titulo="Remover demonstração?" onFechar={() => setConfirmarDemo(false)}>
+          <p className="text-sm text-slate-600 dark:text-slate-400 dark:text-slate-500">
+            As 3 contas demo e os lançamentos de demonstração serão apagados. Seus dados reais
+            serão mantidos.
+          </p>
+          <div className="mt-4 grid gap-2">
+            <button
+              type="button"
+              onClick={removerDemo}
+              disabled={trabalhando}
+              className={btnDanger}
+            >
+              {trabalhando ? 'Removendo…' : 'Confirmar remoção'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmarDemo(false)}
               className="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-800/50 dark:hover:bg-slate-800"
             >
               Cancelar

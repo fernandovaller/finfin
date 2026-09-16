@@ -25,4 +25,8 @@ export class Conta {
   /** Dono da conta (FK no banco). Nullable preserva base anterior ao login. */
   @Column({ type: 'integer', nullable: true })
   usuarioId: number | null;
+
+  /** Marca contas geradas pela demonstração (remoção seletiva). */
+  @Column({ default: false })
+  demo: boolean;
 }

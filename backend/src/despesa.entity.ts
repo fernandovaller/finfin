@@ -44,4 +44,8 @@ export class Despesa {
   /** Dono do lançamento (FK no banco). Nullable para preservar base anterior ao login. */
   @Column({ type: 'integer', nullable: true })
   usuarioId: number | null;
+
+  /** Marca lançamentos gerados pela demonstração (remoção seletiva). */
+  @Column({ default: false })
+  demo: boolean;
 }

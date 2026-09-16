@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { In, Repository } from 'typeorm';
@@ -687,5 +687,231 @@ export class AppService {
       });
       return total;
     });
+  }
+
+  // ================= Demonstração =================
+
+  /** Gera 6 meses de histórico demo: toda categoria × 3 contas, valores determinísticos. */
+  private static readonly DEMO_CONTAS = [
+    { nome: 'Banco Demo', saldoInicial: 2000, icone: '🏦' },
+    { nome: 'Carteira Demo', saldoInicial: 500, icone: '💵' },
+    { nome: 'Cartão Demo', saldoInicial: 0, icone: '💳' },
+  ];
+
+  private static readonly DEMO_BASE_DESPESA: Record<string, number> = {
+    Moradia: 1800,
+    'Alimentação': 900,
+    Transporte: 450,
+    Saúde: 350,
+    Educação: 600,
+    'Lazer e entretenimento': 300,
+    'Compras e vestuário': 500,
+    'Contas e serviços': 400,
+    'Dívidas e financiamentos': 700,
+    'Investimentos e poupança': 500,
+  };
+
+  private static readonly DEMO_BASE_RECEITA: Record<string, number> = {
+    Salário: 6500,
+    Freelance: 1200,
+    Outros: 350,
+  };
+
+  private static readonly DEMO_DESCRICOES: Record<string, string[]> = {
+    Moradia: ['Aluguel mensal', 'Condomínio', 'Reparo hidráulico'],
+    'Alimentação': ['Mercado semanal', 'Feira livre', 'Restaurante'],
+    Transporte: ['Combustível', 'Bilhete metrô', 'Corrida de app'],
+    Saúde: ['Consulta médica', 'Farmácia', 'Plano odontológico'],
+    Educação: ['Mensalidade curso', 'Livros', 'Material escolar'],
+    'Lazer e entretenimento': ['Cinema', 'Show', 'Streaming'],
+    'Compras e vestuário': ['Roupas', 'Calçados', 'Eletrônicos'],
+    'Contas e serviços': ['Energia elétrica', 'Internet', 'Água'],
+    'Dívidas e financiamentos': ['Parcela financiamento', 'Fatura cartão', 'Empréstimo'],
+    'Investimentos e poupança': ['Aporte mensal', 'Tesouro Direto', 'Reserva'],
+  };
+
+  private static readonly DEMO_ORIGENS: Record<string, string[]> = {
+    Salário: ['Salário mensal', 'Salário mensal', 'Adiantamento'],
+    Freelance: ['Projeto site', 'Consultoria', 'Freela design'],
+    Outros: ['Venda usada', 'Reembolso', 'Prêmio'],
+  };
+
+  /** PRNG com seed fixa — a demo gera sempre os mesmos valores. */
+  private static rngDemo(seed: number): () => number {
+    let a = seed;
+    return () => {
+      a |= 0;
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  async statusDemonstracao(
+    usuarioId: number,
+  ): Promise<{ existe: boolean; contas: number; receitas: number; despesas: number }> {
+    const [contas, receitas, despesas] = await Promise.all([
+      this.contas.countBy({ usuarioId, demo: true }),
+      this.receitas.countBy({ usuarioId, demo: true }),
+      this.despesas.countBy({ usuarioId, demo: true }),
+    ]);
+    return { existe: contas + receitas + despesas > 0, contas, receitas, despesas };
+  }
+
+  /**
+   * Cria 3 contas demo + 6 meses de lançamentos (mês atual e 5 anteriores).
+   * - Despesas: toda categoria de despesa × 3 contas × 6 meses.
+   * - Receitas: Salário→Banco, Freelance→Carteira, Outras→Cartão (× 6 meses).
+   * - 1 parcelado 3x por conta (Compras, a partir do mês mais antigo).
+   * Idempotente por bloqueio: segunda chamada dá 409 (remova antes).
+   */
+  async gerarDemonstracao(
+    usuarioId: number,
+  ): Promise<{ contas: number; receitas: number; despesas: number }> {
+    const status = await this.statusDemonstracao(usuarioId);
+    if (status.existe) {
+      throw new ConflictException('Demonstração já existe — remova antes de gerar de novo');
+    }
+    const cats = await this.categorias.findBy({ usuarioId });
+    const nomesDesp = cats.filter((c) => c.tipo === 'despesa').map((c) => c.nome);
+    const nomesRec = cats.filter((c) => c.tipo === 'receita').map((c) => c.nome);
+    const catDesp =
+      nomesDesp.length > 0 ? nomesDesp : Object.keys(AppService.DEMO_BASE_DESPESA);
+    const catRec =
+      nomesRec.length > 0 ? nomesRec : Object.keys(AppService.DEMO_BASE_RECEITA);
+    const formas = (await this.formas.findBy({ usuarioId })).map((f) => f.nome);
+    const formaDe = (i: number): string => (formas.length > 0 ? formas[i % formas.length] : '');
+
+    let contas;
+    try {
+      contas = await this.contas.save(
+        AppService.DEMO_CONTAS.map((c) => ({
+          ...c,
+          nota: 'Conta de demonstração',
+          principal: false,
+          usuarioId,
+          demo: true,
+        })),
+      );
+    } catch {
+      throw new ConflictException(
+        'Já existe conta com nome demo ("Banco/Carteira/Cartão Demo") — renomeie ou apague antes',
+      );
+    }
+
+    // Seis meses: do 5º anterior até o atual (YYYY-MM).
+    const agora = new Date();
+    const meses: string[] = Array.from({ length: 6 }, (_, k) => {
+      const d = new Date(Date.UTC(agora.getFullYear(), agora.getMonth() - (5 - k), 1));
+      return d.toISOString().slice(0, 7);
+    });
+    const rng = AppService.rngDemo(42);
+    const dia = (): string => String(1 + Math.floor(rng() * 28)).padStart(2, '0');
+    const valor = (base: number): number => Math.round(base * (0.85 + rng() * 0.3) * 100) / 100;
+    const gira = (lista: string[], i: number, alt: string): string =>
+      lista.length > 0 ? lista[i % lista.length] : alt;
+
+    const despesas: Array<Record<string, unknown>> = [];
+    const receitas: Array<Record<string, unknown>> = [];
+    let seq = 0;
+    meses.forEach((mes) => {
+      contas.forEach((conta, j) => {
+        for (const cat of catDesp) {
+          const base = AppService.DEMO_BASE_DESPESA[cat] ?? 300;
+          const variantes = AppService.DEMO_DESCRICOES[cat] ?? [cat];
+          despesas.push({
+            data: `${mes}-${dia()}`,
+            valor: valor(base),
+            categoria: cat,
+            descricao: variantes[(seq + j) % variantes.length],
+            formaPagamento: formaDe(seq + j),
+            contaId: conta.id,
+            nota: '',
+            grupoParcela: null,
+            parcelaAtual: null,
+            parcelaTotal: null,
+            demo: true,
+            usuarioId,
+          });
+          seq++;
+        }
+        // Receitas distribuídas: uma categoria por conta (gira se houver mais contas que categorias).
+        const catR = catRec[j % catRec.length];
+        const origens = AppService.DEMO_ORIGENS[catR] ?? [catR];
+        receitas.push({
+          data: `${mes}-${dia()}`,
+          valor: valor(AppService.DEMO_BASE_RECEITA[catR] ?? 500),
+          categoria: catR,
+          origem: gira(origens, meses.indexOf(mes), catR),
+          formaPagamento: formaDe(seq + j),
+          contaId: conta.id,
+          nota: '',
+          demo: true,
+          usuarioId,
+        });
+        seq++;
+      });
+    });
+
+    // Um parcelado 3x por conta (meses 1–3 da janela), categoria Compras se existir.
+    const catParcela = catDesp.includes('Compras e vestuário') ? 'Compras e vestuário' : catDesp[0];
+    const totalParcela = 900;
+    const centavosTotal = Math.round(totalParcela * 100);
+    const baseParcela = Math.floor(centavosTotal / 3);
+    const resto = centavosTotal - baseParcela * 3;
+    contas.forEach((conta, j) => {
+      const grupo = randomUUID();
+      for (let n = 1; n <= 3; n++) {
+        despesas.push({
+          data: somarMeses(`${meses[0]}-10`, n - 1),
+          valor: (baseParcela + (n === 3 ? resto : 0)) / 100,
+          categoria: catParcela,
+          descricao: `Notebook demo (${n}/3)`,
+          formaPagamento: formaDe(j + n),
+          contaId: conta.id,
+          nota: '',
+          grupoParcela: grupo,
+          parcelaAtual: n,
+          parcelaTotal: 3,
+          demo: true,
+          usuarioId,
+        });
+      }
+    });
+
+    await this.despesas.save(despesas as never[]);
+    await this.receitas.save(receitas as never[]);
+    const total = { contas: contas.length, receitas: receitas.length, despesas: despesas.length };
+    await this.auditoria.registrar(usuarioId, {
+      modulo: 'dados',
+      acao: 'importar',
+      descricao: `Demonstração gerada · ${total.receitas} receita(s), ${total.despesas} despesa(s), ${total.contas} conta(s)`,
+      detalhes: total,
+    });
+    return total;
+  }
+
+  /** Remove só o que tem `demo = true` — dados reais intactos. */
+  async removerDemonstracao(
+    usuarioId: number,
+  ): Promise<{ contas: number; receitas: number; despesas: number }> {
+    const [r, d] = await Promise.all([
+      this.receitas.delete({ usuarioId, demo: true }),
+      this.despesas.delete({ usuarioId, demo: true }),
+    ]);
+    const c = await this.contas.delete({ usuarioId, demo: true });
+    const total = {
+      contas: c.affected ?? 0,
+      receitas: r.affected ?? 0,
+      despesas: d.affected ?? 0,
+    };
+    await this.auditoria.registrar(usuarioId, {
+      modulo: 'dados',
+      acao: 'apagar',
+      descricao: `Demonstração removida · ${total.receitas} receita(s), ${total.despesas} despesa(s), ${total.contas} conta(s)`,
+      detalhes: total,
+    });
+    return total;
   }
 }

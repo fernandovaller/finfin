@@ -23,6 +23,7 @@ import { CriacaoInicial1789505184849 } from './migrations/1789505184849-criacao-
 import { ResendApiKey1789558563730 } from './migrations/1789558563730-resend-api-key';
 import { RecuperacaoSenha1789559058157 } from './migrations/1789559058157-recuperacao-senha';
 import { Auditoria1789561000000 } from './migrations/1789561000000-auditoria';
+import { Demo1789562000000 } from './migrations/1789562000000-demo';
 import { RecuperacaoSenha } from './recuperacao-senha.entity';
 
 @Module({
@@ -32,7 +33,7 @@ import { RecuperacaoSenha } from './recuperacao-senha.entity';
       database: 'data/finfin.sqlite',
       entities: [Receita, Despesa, Categoria, FormaPagamento, Conta, Usuario, Sessao, RecuperacaoSenha, Auditoria],
       // As migrations são o único dono do schema — nunca reativar `synchronize`.
-      migrations: [CriacaoInicial1789505184849, ResendApiKey1789558563730, RecuperacaoSenha1789559058157, Auditoria1789561000000],
+      migrations: [CriacaoInicial1789505184849, ResendApiKey1789558563730, RecuperacaoSenha1789559058157, Auditoria1789561000000, Demo1789562000000],
       migrationsRun: true, // aplica migrations pendentes no boot (banco novo ou existente)
     }),
     TypeOrmModule.forFeature([Receita, Despesa, Categoria, FormaPagamento, Conta, Usuario, Sessao, RecuperacaoSenha, Auditoria]),

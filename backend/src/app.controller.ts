@@ -94,4 +94,19 @@ export class AppController {
   apagarTudo(@Req() req: any) {
     return this.appService.apagarTudo(req.usuario.id);
   }
+
+  @Get('dados/demonstracao')
+  statusDemonstracao(@Req() req: any) {
+    return this.appService.statusDemonstracao(req.usuario.id);
+  }
+
+  @Post('dados/demonstracao')
+  gerarDemonstracao(@Req() req: any) {
+    return this.appService.gerarDemonstracao(req.usuario.id);
+  }
+
+  @Delete('dados/demonstracao')
+  removerDemonstracao(@Req() req: any) {
+    return this.appService.removerDemonstracao(req.usuario.id);
+  }
 }
