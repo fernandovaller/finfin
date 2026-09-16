@@ -32,6 +32,11 @@ npm run dev     # sobe backend (:3001) + frontend (:3000) juntos
 
 Abra http://localhost:3000 no navegador.
 
+> **Portas**: copie `.env.example` para `.env` e ajuste `BACKEND_PORT` /
+> `FRONTEND_PORT` se 3000/3001 estiverem em uso. Vale para `npm run dev`
+> e para o Docker (só a porta do host muda; dentro dos contêineres o
+> backend segue na 3001 e o frontend na 80).
+
 | Comando              | O que faz                                        |
 | -------------------- | ------------------------------------------------ |
 | `npm run dev`        | backend (watch) + frontend juntos                |

@@ -12,6 +12,10 @@ dist/
 # Extratos bancários (podem conter dados reais)
 *.ofx
 
+# Ambiente (portas etc. — ver .env.example)
+.env
+.env.local
+
 # Logs
 *.log
 npm-debug.log*

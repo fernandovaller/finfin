@@ -2,7 +2,11 @@ services:
   backend:
     build: ./backend
     ports:
-      - "3001:3001"
+      - "${BACKEND_PORT:-3001}:3001"
+    environment:
+      # Dentro do contêiner o backend sempre escuta na 3001; a variável da
+      # esquerda (host) é a que muda pelo .env.
+      - PORT=3001
     volumes:
       - finfin-data:/app/data
     restart: unless-stopped
@@ -10,7 +14,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "3000:80"
+      - "${FRONTEND_PORT:-3000}:80"
     depends_on:
       - backend
     restart: unless-stopped
