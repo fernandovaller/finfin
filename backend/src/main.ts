@@ -21,6 +21,13 @@ const ORIGENS_PERMITIDAS = new Set([
   `http://127.0.0.1:${PORTA_FRONTEND}`,
 ]);
 
+// Origens extras via env (app externo, celular na LAN, etc.):
+// CORS_ORIGINS=http://192.168.0.10:3000,http://localhost:8081
+for (const origem of (process.env.CORS_ORIGINS ?? '').split(',')) {
+  const limpa = origem.trim();
+  if (limpa) ORIGENS_PERMITIDAS.add(limpa);
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
@@ -38,6 +45,6 @@ async function bootstrap() {
   } catch {
     // FS sem chmod (ex.: Windows): ignora.
   }
-  await app.listen(PORTA_BACKEND);
+  await app.listen(PORTA_BACKEND, '0.0.0.0');
 }
 bootstrap();
