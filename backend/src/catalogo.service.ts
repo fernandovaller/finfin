@@ -86,6 +86,7 @@ export class CatalogoService {
   async updateCategoria(usuarioId: number, id: number, body: any): Promise<Categoria> {
     const categoria = await this.categorias.findOneBy({ id, usuarioId });
     if (!categoria) throw new NotFoundException('Categoria não encontrada');
+    const nomeAntigo = categoria.nome;
     if (body?.nome !== undefined) {
       if (!body.nome.trim()) throw new BadRequestException('Campo "nome" não pode ser vazio');
       categoria.nome = body.nome.trim();
@@ -97,7 +98,21 @@ export class CatalogoService {
       categoria.cor = body.cor;
     }
     try {
-      return await this.categorias.save(categoria);
+      const salva = await this.categorias.save(categoria);
+      // Lançamentos guardam a categoria como texto: renomear propaga para os do dono.
+      if (salva.nome !== nomeAntigo) {
+        const repo = salva.tipo === 'receita' ? this.receitas : this.despesas;
+        await repo
+          .createQueryBuilder()
+          .update()
+          .set({ categoria: salva.nome })
+          .where('usuarioId = :usuarioId AND categoria = :antigo', {
+            usuarioId,
+            antigo: nomeAntigo,
+          })
+          .execute();
+      }
+      return salva;
     } catch {
       throw new ConflictException('Já existe uma categoria com esse nome para esse tipo');
     }
@@ -133,12 +148,34 @@ export class CatalogoService {
   async updateForma(usuarioId: number, id: number, body: any): Promise<FormaPagamento> {
     const forma = await this.formas.findOneBy({ id, usuarioId });
     if (!forma) throw new NotFoundException('Forma de pagamento não encontrada');
+    const nomeAntigo = forma.nome;
     if (body?.nome !== undefined) {
       if (!body.nome.trim()) throw new BadRequestException('Campo "nome" não pode ser vazio');
       forma.nome = body.nome.trim();
     }
     try {
-      return await this.formas.save(forma);
+      const salva = await this.formas.save(forma);
+      // Lançamentos guardam a forma como texto: renomear propaga para os do dono
+      // (receitas e despesas).
+      if (salva.nome !== nomeAntigo) {
+        const condicao = 'usuarioId = :usuarioId AND formaPagamento = :antigo';
+        const params = { usuarioId, antigo: nomeAntigo };
+        await Promise.all([
+          this.receitas
+            .createQueryBuilder()
+            .update()
+            .set({ formaPagamento: salva.nome })
+            .where(condicao, params)
+            .execute(),
+          this.despesas
+            .createQueryBuilder()
+            .update()
+            .set({ formaPagamento: salva.nome })
+            .where(condicao, params)
+            .execute(),
+        ]);
+      }
+      return salva;
     } catch {
       throw new ConflictException('Já existe uma forma de pagamento com esse nome');
     }
