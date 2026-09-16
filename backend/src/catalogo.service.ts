@@ -11,6 +11,7 @@ import { Conta } from './conta.entity';
 import { Despesa } from './despesa.entity';
 import { FormaPagamento } from './forma-pagamento.entity';
 import { Receita } from './receita.entity';
+import { AuditoriaService } from './auditoria.service';
 
 const SEED_CATEGORIAS: Array<{ nome: string; tipo: TipoCategoria; cor: string }> = [
   { nome: 'Moradia', tipo: 'despesa', cor: 'amber' },
@@ -55,6 +56,7 @@ export class CatalogoService {
     private readonly despesas: Repository<Despesa>,
     @InjectRepository(Conta)
     private readonly contas: Repository<Conta>,
+    private readonly auditoria: AuditoriaService,
   ) {}
 
   listCategorias(usuarioId: number, tipo?: string): Promise<Categoria[]> {
@@ -77,7 +79,15 @@ export class CatalogoService {
       throw new BadRequestException(`Campo "cor" deve ser uma de: ${CORES_CATEGORIA.join(', ')}`);
     }
     try {
-      return await this.categorias.save({ nome, tipo, cor, usuarioId });
+      const salva = await this.categorias.save({ nome, tipo, cor, usuarioId });
+      await this.auditoria.registrar(usuarioId, {
+        modulo: 'categorias',
+        acao: 'criar',
+        registroId: salva.id,
+        descricao: `Categoria #${salva.id} · ${salva.nome} (${salva.tipo})`,
+        detalhes: { depois: salva },
+      });
+      return salva;
     } catch {
       throw new ConflictException('Já existe uma categoria com esse nome para esse tipo');
     }
@@ -87,6 +97,7 @@ export class CatalogoService {
     const categoria = await this.categorias.findOneBy({ id, usuarioId });
     if (!categoria) throw new NotFoundException('Categoria não encontrada');
     const nomeAntigo = categoria.nome;
+    const antes = { ...categoria };
     if (body?.nome !== undefined) {
       if (!body.nome.trim()) throw new BadRequestException('Campo "nome" não pode ser vazio');
       categoria.nome = body.nome.trim();
@@ -112,6 +123,13 @@ export class CatalogoService {
           })
           .execute();
       }
+      await this.auditoria.registrar(usuarioId, {
+        modulo: 'categorias',
+        acao: 'atualizar',
+        registroId: salva.id,
+        descricao: `Categoria #${salva.id} · ${salva.nome} (${salva.tipo})`,
+        detalhes: { antes, depois: salva },
+      });
       return salva;
     } catch {
       throw new ConflictException('Já existe uma categoria com esse nome para esse tipo');
@@ -129,6 +147,13 @@ export class CatalogoService {
       );
     }
     await this.categorias.delete({ id, usuarioId });
+    await this.auditoria.registrar(usuarioId, {
+      modulo: 'categorias',
+      acao: 'excluir',
+      registroId: id,
+      descricao: `Categoria #${id} · ${categoria.nome} (${categoria.tipo})`,
+      detalhes: { antes: categoria },
+    });
   }
 
   listFormas(usuarioId: number): Promise<FormaPagamento[]> {
@@ -139,7 +164,15 @@ export class CatalogoService {
     const nome = body?.nome?.trim();
     if (!nome) throw new BadRequestException('Campo obrigatório: nome');
     try {
-      return await this.formas.save({ nome, usuarioId });
+      const salva = await this.formas.save({ nome, usuarioId });
+      await this.auditoria.registrar(usuarioId, {
+        modulo: 'formas-pagamento',
+        acao: 'criar',
+        registroId: salva.id,
+        descricao: `Forma #${salva.id} · ${salva.nome}`,
+        detalhes: { depois: salva },
+      });
+      return salva;
     } catch {
       throw new ConflictException('Já existe uma forma de pagamento com esse nome');
     }
@@ -149,6 +182,7 @@ export class CatalogoService {
     const forma = await this.formas.findOneBy({ id, usuarioId });
     if (!forma) throw new NotFoundException('Forma de pagamento não encontrada');
     const nomeAntigo = forma.nome;
+    const antes = { ...forma };
     if (body?.nome !== undefined) {
       if (!body.nome.trim()) throw new BadRequestException('Campo "nome" não pode ser vazio');
       forma.nome = body.nome.trim();
@@ -175,6 +209,13 @@ export class CatalogoService {
             .execute(),
         ]);
       }
+      await this.auditoria.registrar(usuarioId, {
+        modulo: 'formas-pagamento',
+        acao: 'atualizar',
+        registroId: salva.id,
+        descricao: `Forma #${salva.id} · ${salva.nome}`,
+        detalhes: { antes, depois: salva },
+      });
       return salva;
     } catch {
       throw new ConflictException('Já existe uma forma de pagamento com esse nome');
@@ -195,6 +236,13 @@ export class CatalogoService {
       );
     }
     await this.formas.delete({ id, usuarioId });
+    await this.auditoria.registrar(usuarioId, {
+      modulo: 'formas-pagamento',
+      acao: 'excluir',
+      registroId: id,
+      descricao: `Forma #${id} · ${forma.nome}`,
+      detalhes: { antes: forma },
+    });
   }
 
   listContas(usuarioId: number): Promise<Conta[]> {
@@ -214,7 +262,15 @@ export class CatalogoService {
     try {
       const conta = await this.contas.save({ nome, saldoInicial, nota, icone, principal, usuarioId });
       if (principal) await this.marcarPrincipal(usuarioId, conta.id);
-      return await this.contas.findOneByOrFail({ id: conta.id, usuarioId });
+      const salva = await this.contas.findOneByOrFail({ id: conta.id, usuarioId });
+      await this.auditoria.registrar(usuarioId, {
+        modulo: 'contas',
+        acao: 'criar',
+        registroId: salva.id,
+        descricao: `Conta #${salva.id} · ${salva.nome}`,
+        detalhes: { depois: salva },
+      });
+      return salva;
     } catch (e) {
       if (e instanceof NotFoundException) throw e;
       throw new ConflictException('Já existe uma conta com esse nome');
@@ -224,6 +280,7 @@ export class CatalogoService {
   async updateConta(usuarioId: number, id: number, body: any): Promise<Conta> {
     const conta = await this.contas.findOneBy({ id, usuarioId });
     if (!conta) throw new NotFoundException('Conta não encontrada');
+    const antes = { ...conta };
     if (body?.nome !== undefined) {
       if (!body.nome.trim()) throw new BadRequestException('Campo "nome" não pode ser vazio');
       conta.nome = body.nome.trim();
@@ -246,7 +303,15 @@ export class CatalogoService {
     try {
       const salva = await this.contas.save(conta);
       if (salva.principal) await this.marcarPrincipal(usuarioId, salva.id);
-      return await this.contas.findOneByOrFail({ id: salva.id, usuarioId });
+      const final = await this.contas.findOneByOrFail({ id: salva.id, usuarioId });
+      await this.auditoria.registrar(usuarioId, {
+        modulo: 'contas',
+        acao: 'atualizar',
+        registroId: final.id,
+        descricao: `Conta #${final.id} · ${final.nome}`,
+        detalhes: { antes, depois: final },
+      });
+      return final;
     } catch (e) {
       if (e instanceof NotFoundException) throw e;
       throw new ConflictException('Já existe uma conta com esse nome');
@@ -277,6 +342,13 @@ export class CatalogoService {
       );
     }
     await this.contas.delete({ id, usuarioId });
+    await this.auditoria.registrar(usuarioId, {
+      modulo: 'contas',
+      acao: 'excluir',
+      registroId: id,
+      descricao: `Conta #${id} · ${conta.nome}`,
+      detalhes: { antes: conta },
+    });
   }
 
   /**
@@ -298,6 +370,15 @@ export class CatalogoService {
     if (novasFormas.length > 0) {
       await this.formas.save(novasFormas.map((nome) => ({ nome, usuarioId })));
     }
-    return { categorias: novasCats.length, formas: novasFormas.length };
+    const total = { categorias: novasCats.length, formas: novasFormas.length };
+    if (total.categorias + total.formas > 0) {
+      await this.auditoria.registrar(usuarioId, {
+        modulo: 'dados',
+        acao: 'restaurar',
+        descricao: `Restaurado padrão · ${total.categorias} categoria(s), ${total.formas} forma(s)`,
+        detalhes: total,
+      });
+    }
+    return total;
   }
 }

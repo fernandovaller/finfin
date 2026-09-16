@@ -17,6 +17,7 @@ import { Receita } from './receita.entity';
 import { RecuperacaoSenha } from './recuperacao-senha.entity';
 import { Sessao } from './sessao.entity';
 import { Usuario } from './usuario.entity';
+import { AuditoriaService } from './auditoria.service';
 
 const scrypt = promisify(scryptCb);
 
@@ -145,6 +146,7 @@ export class AuthService {
     private readonly contas: Repository<Conta>,
     @InjectRepository(RecuperacaoSenha)
     private readonly recuperacoes: Repository<RecuperacaoSenha>,
+    private readonly auditoria: AuditoriaService,
   ) {}
 
   /** Boot: remove sessões expiradas acumuladas no banco. */
@@ -186,11 +188,26 @@ export class AuthService {
     if (!usuario || !(await confereSenha(senha, usuario.senhaHash))) {
       throw new UnauthorizedException('E-mail ou senha inválidos');
     }
-    return this.abrirSessao(usuario);
+    const sessao = await this.abrirSessao(usuario);
+    await this.auditoria.registrar(usuario.id, {
+      modulo: 'auth',
+      acao: 'login',
+      descricao: `Login · ${usuario.email}`,
+    });
+    return sessao;
   }
 
   async logout(token: string): Promise<void> {
-    if (token) await this.sessoes.delete({ token });
+    if (!token) return;
+    const sessao = await this.sessoes.findOneBy({ token });
+    if (sessao) {
+      await this.sessoes.delete({ token });
+      await this.auditoria.registrar(sessao.usuarioId, {
+        modulo: 'auth',
+        acao: 'logout',
+        descricao: 'Logout',
+      });
+    }
   }
 
   /** Atualiza nome/email/avatar do dono. Avatar = dataURL de imagem ou null (remove). */
@@ -228,7 +245,13 @@ export class AuthService {
       }
       usuario.avatar = avatar;
     }
-    return { usuario: publico(await this.usuarios.save(usuario)) };
+    const salvo = await this.usuarios.save(usuario);
+    await this.auditoria.registrar(usuarioId, {
+      modulo: 'auth',
+      acao: 'atualizar',
+      descricao: `Perfil atualizado · ${salvo.email}`,
+    });
+    return { usuario: publico(salvo) };
   }
 
   /** Troca a senha conferindo a atual; revoga as demais sessões do usuário. */
@@ -256,6 +279,11 @@ export class AuthService {
     } else {
       await this.sessoes.delete({ usuarioId });
     }
+    await this.auditoria.registrar(usuarioId, {
+      modulo: 'auth',
+      acao: 'atualizar',
+      descricao: 'Senha trocada',
+    });
     return { usuario: publico(salvo) };
   }
 

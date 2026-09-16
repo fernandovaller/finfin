@@ -30,7 +30,10 @@ const GRUPOS = [
   },
   {
     rotulo: 'Sistema',
-    itens: [{ to: '/configuracoes', label: 'Configurações', Icon: IconeEngrenagem }],
+    itens: [
+      { to: '/configuracoes', label: 'Configurações', Icon: IconeEngrenagem },
+      { to: '/auditoria', label: 'Auditoria', Icon: IconeExtrato },
+    ],
   },
 ];
 

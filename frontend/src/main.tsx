@@ -4,6 +4,7 @@ import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth';
 import { ProvedorAparencia } from './tema';
 import Layout from './Layout';
+import Auditoria from './pages/Auditoria';
 import Categorias from './pages/Categorias';
 import Configuracoes from './pages/Configuracoes';
 import Contas from './pages/Contas';
@@ -53,6 +54,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="relatorios" element={<Relatorios />} />
             <Route path="categorias" element={<Categorias />} />
             <Route path="contas" element={<Contas />} />
+            <Route path="auditoria" element={<Auditoria />} />
             <Route path="configuracoes" element={<Configuracoes />} />
             <Route path="formas-pagamento" element={<FormasPagamento />} />
             <Route path="perfil" element={<Perfil />} />

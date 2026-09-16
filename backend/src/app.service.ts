@@ -7,6 +7,7 @@ import { Conta } from './conta.entity';
 import { Despesa } from './despesa.entity';
 import { FormaPagamento } from './forma-pagamento.entity';
 import { Receita } from './receita.entity';
+import { AuditoriaService } from './auditoria.service';
 
 function assertLancamento(body: any, campos: string[]): void {
   for (const campo of campos) {
@@ -48,6 +49,7 @@ export class AppService {
     private readonly categorias: Repository<Categoria>,
     @InjectRepository(FormaPagamento)
     private readonly formas: Repository<FormaPagamento>,
+    private readonly auditoria: AuditoriaService,
   ) {}
 
   /** Todo lançamento pertence a uma conta do próprio usuário. */
@@ -63,7 +65,7 @@ export class AppService {
   async createReceita(usuarioId: number, body: any): Promise<Receita> {
     assertLancamento(body, ['data', 'valor', 'categoria', 'origem']);
     const contaId = await this.assertConta(usuarioId, body?.contaId);
-    return this.receitas.save({
+    const salva = await this.receitas.save({
       data: body.data,
       valor: body.valor,
       categoria: body.categoria,
@@ -73,6 +75,14 @@ export class AppService {
       nota: body.nota ?? '',
       usuarioId,
     });
+    await this.auditoria.registrar(usuarioId, {
+      modulo: 'receitas',
+      acao: 'criar',
+      registroId: salva.id,
+      descricao: `Receita #${salva.id} · ${salva.categoria} · R$ ${salva.valor}`,
+      detalhes: { depois: salva },
+    });
+    return salva;
   }
 
   async createDespesa(usuarioId: number, body: any): Promise<Despesa | Despesa[]> {
@@ -81,7 +91,7 @@ export class AppService {
     const totalParcelas = assertParcelas(body);
     const nota = body.nota ?? '';
     if (totalParcelas === 1) {
-      return this.despesas.save({
+      const salva = await this.despesas.save({
         data: body.data,
         valor: body.valor,
         categoria: body.categoria,
@@ -94,6 +104,14 @@ export class AppService {
         parcelaTotal: null,
         usuarioId,
       });
+      await this.auditoria.registrar(usuarioId, {
+        modulo: 'despesas',
+        acao: 'criar',
+        registroId: salva.id,
+        descricao: `Despesa #${salva.id} · ${salva.descricao || salva.categoria} · R$ ${salva.valor}`,
+        detalhes: { depois: salva },
+      });
+      return salva;
     }
     // Parcelado: desdobra em N despesas mensais (competência = mês da parcela).
     const grupoParcela = randomUUID();
@@ -118,7 +136,16 @@ export class AppService {
         usuarioId,
       };
     });
-    return this.despesas.save(itens);
+    return this.despesas.save(itens).then(async (salvas) => {
+      const lista = Array.isArray(salvas) ? salvas : [salvas];
+      await this.auditoria.registrar(usuarioId, {
+        modulo: 'despesas',
+        acao: 'criar',
+        descricao: `Despesa parcelada ${totalParcelas}x · ${base} · R$ ${body.valor}`,
+        detalhes: { depois: lista.map((d) => ({ id: d.id, data: d.data, valor: d.valor })) },
+      });
+      return salvas;
+    });
   }
 
   async updateReceita(usuarioId: number, id: number, body: any): Promise<Receita> {
@@ -126,6 +153,7 @@ export class AppService {
     const contaId = await this.assertConta(usuarioId, body?.contaId);
     const receita = await this.receitas.findOneBy({ id, usuarioId });
     if (!receita) throw new NotFoundException('Receita não encontrada');
+    const antes = { ...receita };
     Object.assign(receita, {
       data: body.data,
       valor: body.valor,
@@ -135,7 +163,15 @@ export class AppService {
       contaId,
       nota: body.nota ?? '',
     });
-    return this.receitas.save(receita);
+    const salva = await this.receitas.save(receita);
+    await this.auditoria.registrar(usuarioId, {
+      modulo: 'receitas',
+      acao: 'atualizar',
+      registroId: salva.id,
+      descricao: `Receita #${salva.id} · ${salva.categoria} · R$ ${salva.valor}`,
+      detalhes: { antes, depois: salva },
+    });
+    return salva;
   }
 
   async updateDespesa(usuarioId: number, id: number, body: any): Promise<Despesa> {
@@ -143,6 +179,7 @@ export class AppService {
     const contaId = await this.assertConta(usuarioId, body?.contaId);
     const despesa = await this.despesas.findOneBy({ id, usuarioId });
     if (!despesa) throw new NotFoundException('Despesa não encontrada');
+    const antes = { ...despesa };
     Object.assign(despesa, {
       data: body.data,
       valor: body.valor,
@@ -152,7 +189,15 @@ export class AppService {
       contaId,
       nota: body.nota ?? '',
     });
-    return this.despesas.save(despesa);
+    const salva = await this.despesas.save(despesa);
+    await this.auditoria.registrar(usuarioId, {
+      modulo: 'despesas',
+      acao: 'atualizar',
+      registroId: salva.id,
+      descricao: `Despesa #${salva.id} · ${salva.descricao || salva.categoria} · R$ ${salva.valor}`,
+      detalhes: { antes, depois: salva },
+    });
+    return salva;
   }
 
   listReceitas(usuarioId: number, contaId?: number): Promise<Receita[]> {
@@ -168,8 +213,16 @@ export class AppService {
   }
 
   async deleteReceita(usuarioId: number, id: number): Promise<void> {
-    const res = await this.receitas.delete({ id, usuarioId });
-    if (!res.affected) throw new NotFoundException('Receita não encontrada');
+    const antes = await this.receitas.findOneBy({ id, usuarioId });
+    if (!antes) throw new NotFoundException('Receita não encontrada');
+    await this.receitas.delete({ id, usuarioId });
+    await this.auditoria.registrar(usuarioId, {
+      modulo: 'receitas',
+      acao: 'excluir',
+      registroId: id,
+      descricao: `Receita #${id} · ${antes.categoria} · R$ ${antes.valor}`,
+      detalhes: { antes },
+    });
   }
 
   async deleteDespesa(
@@ -182,13 +235,34 @@ export class AppService {
       if (!despesa) throw new NotFoundException('Despesa não encontrada');
       if (!despesa.grupoParcela) {
         await this.despesas.delete({ id, usuarioId });
+        await this.auditoria.registrar(usuarioId, {
+          modulo: 'despesas',
+          acao: 'excluir',
+          registroId: id,
+          descricao: `Despesa #${id} · ${despesa.descricao || despesa.categoria} · R$ ${despesa.valor}`,
+          detalhes: { antes: despesa },
+        });
         return { excluidas: 1 };
       }
       const res = await this.despesas.delete({ grupoParcela: despesa.grupoParcela, usuarioId });
+      await this.auditoria.registrar(usuarioId, {
+        modulo: 'despesas',
+        acao: 'excluir',
+        descricao: `Despesas parceladas (${res.affected ?? 0}x) · ${despesa.descricao || despesa.categoria}`,
+        detalhes: { antes: despesa, excluidas: res.affected ?? 0 },
+      });
       return { excluidas: res.affected ?? 0 };
     }
-    const res = await this.despesas.delete({ id, usuarioId });
-    if (!res.affected) throw new NotFoundException('Despesa não encontrada');
+    const antes = await this.despesas.findOneBy({ id, usuarioId });
+    if (!antes) throw new NotFoundException('Despesa não encontrada');
+    await this.despesas.delete({ id, usuarioId });
+    await this.auditoria.registrar(usuarioId, {
+      modulo: 'despesas',
+      acao: 'excluir',
+      registroId: id,
+      descricao: `Despesa #${id} · ${antes.descricao || antes.categoria} · R$ ${antes.valor}`,
+      detalhes: { antes },
+    });
     return { excluidas: 1 };
   }
 
@@ -240,6 +314,11 @@ export class AppService {
       this.categorias.find({ where: { usuarioId }, order: { id: 'ASC' } }),
       this.formas.find({ where: { usuarioId }, order: { id: 'ASC' } }),
     ]);
+    await this.auditoria.registrar(usuarioId, {
+      modulo: 'dados',
+      acao: 'exportar',
+      descricao: `Exportação JSON · ${receitas.length} receita(s), ${despesas.length} despesa(s)`,
+    });
     return {
       app: 'finfin',
       versao: 1,
@@ -272,6 +351,11 @@ export class AppService {
           linha([r.id, r.data, r.valor, r.categoria, r.origem, r.formaPagamento, r.contaId, r.nota]),
         ),
       ].join('\n');
+      await this.auditoria.registrar(usuarioId, {
+        modulo: 'dados',
+        acao: 'exportar',
+        descricao: `Exportação CSV · ${itens.length} receita(s)`,
+      });
       return { filename: 'finfin-receitas.csv', csv };
     }
     if (tipo === 'despesas') {
@@ -282,6 +366,11 @@ export class AppService {
           linha([d.id, d.data, d.valor, d.categoria, d.descricao, d.formaPagamento, d.contaId, d.nota, d.grupoParcela, d.parcelaAtual, d.parcelaTotal]),
         ),
       ].join('\n');
+      await this.auditoria.registrar(usuarioId, {
+        modulo: 'dados',
+        acao: 'exportar',
+        descricao: `Exportação CSV · ${itens.length} despesa(s)`,
+      });
       return { filename: 'finfin-despesas.csv', csv };
     }
     throw new BadRequestException('Campo "tipo" deve ser "receitas" ou "despesas"');
@@ -293,14 +382,31 @@ export class AppService {
       this.receitas.delete({ usuarioId }),
       this.despesas.delete({ usuarioId }),
     ]);
-    return { receitas: r.affected ?? 0, despesas: d.affected ?? 0 };
+    const total = { receitas: r.affected ?? 0, despesas: d.affected ?? 0 };
+    await this.auditoria.registrar(usuarioId, {
+      modulo: 'dados',
+      acao: 'apagar',
+      descricao: `Apagou lançamentos · ${total.receitas} receita(s), ${total.despesas} despesa(s)`,
+      detalhes: total,
+    });
+    return total;
   }
 
   /** Apaga lançamentos + contas do usuário, mantendo catálogo e perfil. */
   async apagarTudo(usuarioId: number): Promise<{ receitas: number; despesas: number; contas: number }> {
-    const lanc = await this.apagarLancamentos(usuarioId);
+    const [r, d] = await Promise.all([
+      this.receitas.delete({ usuarioId }),
+      this.despesas.delete({ usuarioId }),
+    ]);
     const c = await this.contas.delete({ usuarioId });
-    return { ...lanc, contas: c.affected ?? 0 };
+    const total = { receitas: r.affected ?? 0, despesas: d.affected ?? 0, contas: c.affected ?? 0 };
+    await this.auditoria.registrar(usuarioId, {
+      modulo: 'dados',
+      acao: 'apagar',
+      descricao: `Apagou tudo · ${total.receitas} receita(s), ${total.despesas} despesa(s), ${total.contas} conta(s)`,
+      detalhes: total,
+    });
+    return total;
   }
 
   /**
@@ -414,7 +520,14 @@ export class AppService {
           nDespesas++;
         }
       }
-      return { receitas: nReceitas, despesas: nDespesas, ignorados };
+      const total = { receitas: nReceitas, despesas: nDespesas, ignorados };
+      await this.auditoria.registrar(usuarioId, {
+        modulo: 'importacao',
+        acao: 'importar',
+        descricao: `Importação OFX · ${nReceitas} receita(s), ${nDespesas} despesa(s), ${ignorados} ignorado(s)`,
+        detalhes: total,
+      });
+      return total;
     });
   }
 
@@ -558,7 +671,7 @@ export class AppService {
         });
         nDespesas++;
       }
-      return {
+      const total = {
         modo,
         categorias: nCats,
         formasPagamento: nFormas,
@@ -566,6 +679,13 @@ export class AppService {
         receitas: nReceitas,
         despesas: nDespesas,
       };
+      await this.auditoria.registrar(usuarioId, {
+        modulo: 'importacao',
+        acao: 'importar',
+        descricao: `Importação backup (${modo}) · ${nReceitas} receita(s), ${nDespesas} despesa(s), ${nContas} conta(s)`,
+        detalhes: total,
+      });
+      return total;
     });
   }
 }
