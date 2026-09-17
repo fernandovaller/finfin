@@ -2,6 +2,7 @@ import { Body, Controller, Get, Headers, HttpCode, Post, Put, Req, Res, UseGuard
 import type { CookieOptions, Response } from 'express';
 import { AuthGuard } from './auth.guard';
 import { AuthService, UsuarioPublico } from './auth.service';
+import { LoginDto } from './dto/auth.dto';
 import { Limite } from './limite.guard';
 
 /** Nome do cookie do refresh (nunca lido pelo JS: HttpOnly). */
@@ -37,7 +38,7 @@ export class AuthController {
 
   @Post('login')
   @Limite(10)
-  async login(@Body() body: any, @Res({ passthrough: true }) res: Response) {
+  async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: Response) {
     const sessao = await this.auth.login(body);
     res.cookie(COOKIE_REFRESH, sessao.refreshToken, { ...opcoesCookieRefresh(), maxAge: COOKIE_MAX_AGE_MS });
     return { usuario: sessao.usuario, token: sessao.token, expiraEm: sessao.expiraEm };

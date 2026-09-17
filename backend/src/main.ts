@@ -1,4 +1,4 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
@@ -70,6 +70,16 @@ async function bootstrap() {
   // Teto do corpo: avatar (500 KB) + lote OFX (2000 itens) cabem; gigante não.
   app.use(json({ limit: '1mb' }));
   app.use(urlencoded({ extended: true, limit: '1mb' }));
+  // Item 1 do SECURITY.md: valida DTOs, remove campo extra e converte tipos.
+  // Só atua onde o controller declara DTO — rotas ainda em `body: any`
+  // passam ilesas até serem migradas (ver src/dto/auth.dto.ts).
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
   app.useGlobalFilters(new FiltroErros());
   app.use(cookieParser());
   // Em produção atrás de um proxy (nginx): descomente para o throttler enxergar
