@@ -18,6 +18,15 @@ import { RecuperacaoSenha } from './recuperacao-senha.entity';
 import { Sessao } from './sessao.entity';
 import { Usuario } from './usuario.entity';
 import { AuditoriaService } from './auditoria.service';
+import {
+  AtualizarPerfilDto,
+  CadastroDto,
+  LoginDto,
+  RecuperarSenhaDto,
+  RedefinirSenhaDto,
+  SalvarIntegracoesDto,
+  TrocarSenhaDto,
+} from './dto/auth.dto';
 
 const scrypt = promisify(scryptCb);
 
@@ -162,21 +171,11 @@ export class AuthService {
     await this.sessoes.delete({ expiraEm: LessThan(new Date().toISOString()) });
   }
 
-  async cadastro(body: any): Promise<SessaoCriada> {
-    const nome = body?.nome?.trim();
-    if (!nome) throw new BadRequestException('Campo obrigatório: nome');
-    if (nome.length > 120) {
-      throw new BadRequestException('Campo "nome" grande demais (máximo 120 caracteres)');
-    }
-    const email = normalizaEmail(body?.email);
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw new BadRequestException('Campo "email" inválido');
-    }
-    const senha = body?.senha;
-    // Mínimo 8 (evita senhas triviais); máximo 128 (evita scrypt lento com senha gigante).
-    if (typeof senha !== 'string' || senha.length < 8 || senha.length > 128) {
-      throw new BadRequestException('Campo "senha" deve ter de 8 a 128 caracteres');
-    }
+  async cadastro(body: CadastroDto): Promise<SessaoCriada> {
+    // Forma/tamanho já validados pelo DTO; aqui só regra de negócio.
+    const nome = body.nome.trim();
+    const email = normalizaEmail(body.email);
+    const senha = body.senha;
     if (await this.usuarios.findOneBy({ email })) {
       throw new ConflictException('Este e-mail já está cadastrado');
     }
@@ -189,12 +188,9 @@ export class AuthService {
     return this.abrirSessao(usuario);
   }
 
-  async login(body: any): Promise<SessaoCriada> {
-    const email = normalizaEmail(body?.email);
-    const senha = body?.senha;
-    if (!email || typeof senha !== 'string') {
-      throw new BadRequestException('Informe e-mail e senha');
-    }
+  async login(body: LoginDto): Promise<SessaoCriada> {
+    const email = normalizaEmail(body.email);
+    const senha = body.senha;
     const usuario = await this.usuarios.findOneBy({ email });
     if (!usuario || !(await confereSenha(senha, usuario.senhaHash))) {
       throw new UnauthorizedException('E-mail ou senha inválidos');
@@ -266,42 +262,23 @@ export class AuthService {
   }
 
   /** Atualiza nome/email/avatar do dono. Avatar = dataURL de imagem ou null (remove). */
-  async atualizarPerfil(usuarioId: number, body: any): Promise<{ usuario: UsuarioPublico }> {
+  async atualizarPerfil(usuarioId: number, body: AtualizarPerfilDto): Promise<{ usuario: UsuarioPublico }> {
     const usuario = await this.usuarios.findOneBy({ id: usuarioId });
     if (!usuario) throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
-    if (body?.nome !== undefined) {
-      const nome = body.nome?.trim();
-      if (!nome) throw new BadRequestException('Campo "nome" não pode ser vazio');
-      if (nome.length > 120) {
-        throw new BadRequestException('Campo "nome" grande demais (máximo 120 caracteres)');
-      }
-      usuario.nome = nome;
+    if (body.nome !== undefined) {
+      usuario.nome = body.nome.trim();
     }
-    if (body?.email !== undefined) {
+    if (body.email !== undefined) {
       const email = normalizaEmail(body.email);
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        throw new BadRequestException('Campo "email" inválido');
-      }
       const outro = await this.usuarios.findOneBy({ email });
       if (outro && outro.id !== usuarioId) {
         throw new ConflictException('Este e-mail já está em uso por outra conta');
       }
       usuario.email = email;
     }
-    if (body?.avatar !== undefined) {
-      const avatar = body.avatar;
-      if (avatar !== null) {
-        if (
-          typeof avatar !== 'string' ||
-          !/^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(avatar)
-        ) {
-          throw new BadRequestException('Campo "avatar" deve ser uma imagem (dataURL)');
-        }
-        if (avatar.length > 500_000) {
-          throw new BadRequestException('Avatar grande demais (máximo ~375 KB)');
-        }
-      }
-      usuario.avatar = avatar;
+    if (body.avatar !== undefined) {
+      // DTO validou dataURL/tamanho; null remove.
+      usuario.avatar = body.avatar;
     }
     const salvo = await this.usuarios.save(usuario);
     await this.auditoria.registrar(usuarioId, {
@@ -315,18 +292,15 @@ export class AuthService {
   /** Troca a senha conferindo a atual; revoga as demais sessões do usuário. */
   async trocarSenha(
     usuarioId: number,
-    body: any,
+    body: TrocarSenhaDto,
     tokenAtual?: string,
   ): Promise<{ usuario: UsuarioPublico }> {
     const usuario = await this.usuarios.findOneBy({ id: usuarioId });
     if (!usuario) throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
-    const atual = body?.senhaAtual;
-    const nova = body?.novaSenha;
+    const atual = body.senhaAtual;
+    const nova = body.novaSenha;
     if (typeof atual !== 'string' || !(await confereSenha(atual, usuario.senhaHash))) {
       throw new UnauthorizedException('Senha atual incorreta');
-    }
-    if (typeof nova !== 'string' || nova.length < 8 || nova.length > 128) {
-      throw new BadRequestException('A nova senha deve ter de 8 a 128 caracteres');
     }
     usuario.senhaHash = await hashSenha(nova);
     const salvo = await this.usuarios.save(usuario);
@@ -368,14 +342,12 @@ export class AuthService {
    * Salva (ou limpa, com string vazia/null) a chave do Resend da conta.
    * Vale só para o dono; sem chave na conta, vale a do servidor (RESEND_API_KEY).
    */
-  async salvarIntegracoes(usuarioId: number, body: any): Promise<StatusIntegracoes> {
+  async salvarIntegracoes(usuarioId: number, body: SalvarIntegracoesDto): Promise<StatusIntegracoes> {
     const usuario = await this.usuarios.findOneBy({ id: usuarioId });
     if (!usuario) throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
-    if (body?.resendApiKey !== undefined) {
+    if (body.resendApiKey !== undefined) {
+      // DTO validou tamanho quando há conteúdo; null/'' limpa.
       const chave = body.resendApiKey === null ? '' : String(body.resendApiKey).trim();
-      if (chave && (chave.length < 10 || chave.length > 500)) {
-        throw new BadRequestException('Chave do Resend inválida');
-      }
       usuario.resendApiKey = chave || null;
       await this.usuarios.save(usuario);
     }
@@ -393,10 +365,10 @@ export class AuthService {
    * e-mail é cadastrado nem se o envio funcionou (anti-enumeração). O token
    * puro só existe no link — no banco fica só o hash SHA-256.
    */
-  async solicitarRecuperacao(body: any): Promise<{ ok: true }> {
+  async solicitarRecuperacao(body: RecuperarSenhaDto): Promise<{ ok: true }> {
     // Limpeza oportunista: pedido expirado não serve para nada.
     await this.recuperacoes.delete({ expiraEm: LessThan(new Date().toISOString()) });
-    const email = normalizaEmail(body?.email);
+    const email = normalizaEmail(body.email);
     const usuario = email ? await this.usuarios.findOneBy({ email }) : null;
     if (!usuario) return { ok: true };
     const chave = await this.chaveResendEfetiva(usuario.id);
@@ -426,13 +398,10 @@ export class AuthService {
   }
 
   /** Troca a senha via token do e-mail; uso único, derruba todas as sessões. */
-  async redefinirSenha(body: any): Promise<{ ok: true }> {
-    const token = typeof body?.token === 'string' ? body.token.trim() : '';
-    const nova = body?.novaSenha;
+  async redefinirSenha(body: RedefinirSenhaDto): Promise<{ ok: true }> {
+    const token = body.token.trim();
+    const nova = body.novaSenha;
     if (!token) throw new BadRequestException('Token inválido ou expirado');
-    if (typeof nova !== 'string' || nova.length < 8 || nova.length > 128) {
-      throw new BadRequestException('A nova senha deve ter de 8 a 128 caracteres');
-    }
     const pedido = await this.recuperacoes.findOneBy({
       tokenHash: createHash('sha256').update(token).digest('hex'),
     });

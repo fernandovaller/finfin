@@ -9,6 +9,14 @@ import { Repository } from 'typeorm';
 import { Categoria, CORES_CATEGORIA, TipoCategoria } from './categoria.entity';
 import { Conta } from './conta.entity';
 import { Despesa } from './despesa.entity';
+import {
+  CreateCategoriaDto,
+  CreateContaDto,
+  CreateFormaDto,
+  UpdateCategoriaDto,
+  UpdateContaDto,
+  UpdateFormaDto,
+} from './dto/catalogo.dto';
 import { FormaPagamento } from './forma-pagamento.entity';
 import { Receita } from './receita.entity';
 import { AuditoriaService } from './auditoria.service';
@@ -77,7 +85,7 @@ export class CatalogoService {
     return this.categorias.find({ where, order: { nome: 'ASC' } });
   }
 
-  async createCategoria(usuarioId: number, body: any): Promise<Categoria> {
+  async createCategoria(usuarioId: number, body: CreateCategoriaDto): Promise<Categoria> {
     const nome = nomeValido(body?.nome, 'nome');
     const tipo = body?.tipo;
     if (tipo !== 'receita' && tipo !== 'despesa') {
@@ -102,7 +110,7 @@ export class CatalogoService {
     }
   }
 
-  async updateCategoria(usuarioId: number, id: number, body: any): Promise<Categoria> {
+  async updateCategoria(usuarioId: number, id: number, body: UpdateCategoriaDto): Promise<Categoria> {
     const categoria = await this.categorias.findOneBy({ id, usuarioId });
     if (!categoria) throw new NotFoundException('Categoria não encontrada');
     const nomeAntigo = categoria.nome;
@@ -168,7 +176,7 @@ export class CatalogoService {
     return this.formas.find({ where: { usuarioId }, order: { nome: 'ASC' } });
   }
 
-  async createForma(usuarioId: number, body: any): Promise<FormaPagamento> {
+  async createForma(usuarioId: number, body: CreateFormaDto): Promise<FormaPagamento> {
     const nome = nomeValido(body?.nome, 'nome');
     try {
       const salva = await this.formas.save({ nome, usuarioId });
@@ -185,7 +193,7 @@ export class CatalogoService {
     }
   }
 
-  async updateForma(usuarioId: number, id: number, body: any): Promise<FormaPagamento> {
+  async updateForma(usuarioId: number, id: number, body: UpdateFormaDto): Promise<FormaPagamento> {
     const forma = await this.formas.findOneBy({ id, usuarioId });
     if (!forma) throw new NotFoundException('Forma de pagamento não encontrada');
     const nomeAntigo = forma.nome;
@@ -255,7 +263,7 @@ export class CatalogoService {
     return this.contas.find({ where: { usuarioId }, order: { nome: 'ASC' } });
   }
 
-  async createConta(usuarioId: number, body: any): Promise<Conta> {
+  async createConta(usuarioId: number, body: CreateContaDto): Promise<Conta> {
     const nome = nomeValido(body?.nome, 'nome');
     const saldoInicial = body?.saldoInicial ?? 0;
     if (typeof saldoInicial !== 'number' || !Number.isFinite(saldoInicial)) {
@@ -285,7 +293,7 @@ export class CatalogoService {
     }
   }
 
-  async updateConta(usuarioId: number, id: number, body: any): Promise<Conta> {
+  async updateConta(usuarioId: number, id: number, body: UpdateContaDto): Promise<Conta> {
     const conta = await this.contas.findOneBy({ id, usuarioId });
     if (!conta) throw new NotFoundException('Conta não encontrada');
     const antes = { ...conta };

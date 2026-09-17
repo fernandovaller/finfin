@@ -1,6 +1,7 @@
 import { Controller, Delete, Get, Param, ParseIntPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from './auth.guard';
 import { AuditoriaService } from './auditoria.service';
+import { AuditoriaQueryDto, LimparAuditoriaQueryDto } from './dto/consulta.dto';
 
 @Controller('auditoria')
 @UseGuards(AuthGuard)
@@ -9,31 +10,14 @@ export class AuditoriaController {
 
   /** Lista paginada: ?modulo=&acao=&descricao=&dataInicio=YYYY-MM-DD&dataFim=&pagina=&porPagina= */
   @Get()
-  listar(
-    @Req() req: any,
-    @Query('modulo') modulo?: string,
-    @Query('acao') acao?: string,
-    @Query('descricao') descricao?: string,
-    @Query('dataInicio') dataInicio?: string,
-    @Query('dataFim') dataFim?: string,
-    @Query('pagina') pagina?: string,
-    @Query('porPagina') porPagina?: string,
-  ) {
-    return this.auditoria.listar(req.usuario.id, {
-      modulo: modulo?.trim() || undefined,
-      acao: acao?.trim() || undefined,
-      descricao: descricao?.trim() || undefined,
-      dataInicio: dataInicio?.trim() || undefined,
-      dataFim: dataFim?.trim() || undefined,
-      pagina: pagina ? Number(pagina) : undefined,
-      porPagina: porPagina ? Number(porPagina) : undefined,
-    });
+  listar(@Req() req: any, @Query() q: AuditoriaQueryDto) {
+    return this.auditoria.listar(req.usuario.id, q);
   }
 
   /** Limpeza manual: DELETE /api/auditoria?antesDe=YYYY-MM-DD (sem param = tudo). */
   @Delete()
-  limpar(@Req() req: any, @Query('antesDe') antesDe?: string) {
-    return this.auditoria.limpar(req.usuario.id, antesDe?.trim() || undefined);
+  limpar(@Req() req: any, @Query() q: LimparAuditoriaQueryDto) {
+    return this.auditoria.limpar(req.usuario.id, q.antesDe);
   }
 
   /** Restaura um registro excluído a partir do snapshot do evento. */

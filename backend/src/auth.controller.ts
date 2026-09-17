@@ -2,7 +2,15 @@ import { Body, Controller, Get, Headers, HttpCode, Post, Put, Req, Res, UseGuard
 import type { CookieOptions, Response } from 'express';
 import { AuthGuard } from './auth.guard';
 import { AuthService, UsuarioPublico } from './auth.service';
-import { LoginDto } from './dto/auth.dto';
+import {
+  AtualizarPerfilDto,
+  CadastroDto,
+  LoginDto,
+  RecuperarSenhaDto,
+  RedefinirSenhaDto,
+  SalvarIntegracoesDto,
+  TrocarSenhaDto,
+} from './dto/auth.dto';
 import { Limite } from './limite.guard';
 
 /** Nome do cookie do refresh (nunca lido pelo JS: HttpOnly). */
@@ -30,7 +38,7 @@ export class AuthController {
   /** 10 tentativas por minuto por IP — freia força bruta e DoS de CPU via scrypt. */
   @Post('cadastro')
   @Limite(10)
-  async cadastro(@Body() body: any, @Res({ passthrough: true }) res: Response) {
+  async cadastro(@Body() body: CadastroDto, @Res({ passthrough: true }) res: Response) {
     const sessao = await this.auth.cadastro(body);
     res.cookie(COOKIE_REFRESH, sessao.refreshToken, { ...opcoesCookieRefresh(), maxAge: COOKIE_MAX_AGE_MS });
     return { usuario: sessao.usuario, token: sessao.token, expiraEm: sessao.expiraEm };
@@ -80,13 +88,13 @@ export class AuthController {
 
   @Put('perfil')
   @UseGuards(AuthGuard)
-  perfil(@Req() req: any, @Body() body: any) {
+  perfil(@Req() req: any, @Body() body: AtualizarPerfilDto) {
     return this.auth.atualizarPerfil(req.usuario.id, body);
   }
 
   @Put('senha')
   @UseGuards(AuthGuard)
-  senha(@Req() req: any, @Body() body: any) {
+  senha(@Req() req: any, @Body() body: TrocarSenhaDto) {
     const token = (req.headers?.authorization ?? '').replace(/^Bearer\s+/i, '').trim();
     return this.auth.trocarSenha(req.usuario.id, body, token);
   }
@@ -99,21 +107,21 @@ export class AuthController {
 
   @Put('integracoes')
   @UseGuards(AuthGuard)
-  salvarIntegracoes(@Req() req: any, @Body() body: any) {
+  salvarIntegracoes(@Req() req: any, @Body() body: SalvarIntegracoesDto) {
     return this.auth.salvarIntegracoes(req.usuario.id, body);
   }
 
   /** Pede o link de recuperação (público, genérico, 5 req/min por IP). */
   @Post('recuperar-senha')
   @Limite(5)
-  recuperarSenha(@Body() body: any) {
+  recuperarSenha(@Body() body: RecuperarSenhaDto) {
     return this.auth.solicitarRecuperacao(body);
   }
 
   /** Define a nova senha com o token do e-mail (público, 5 req/min por IP). */
   @Post('redefinir-senha')
   @Limite(5)
-  redefinirSenha(@Body() body: any) {
+  redefinirSenha(@Body() body: RedefinirSenhaDto) {
     return this.auth.redefinirSenha(body);
   }
 }

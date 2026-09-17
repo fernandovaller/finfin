@@ -5,6 +5,14 @@ import { In, Repository } from 'typeorm';
 import { Categoria } from './categoria.entity';
 import { Conta } from './conta.entity';
 import { Despesa } from './despesa.entity';
+import {
+  CreateDespesaDto,
+  CreateReceitaDto,
+  ImportarBackupDto,
+  ImportarOfxDto,
+  UpdateDespesaDto,
+  UpdateReceitaDto,
+} from './dto/lancamentos.dto';
 import { FormaPagamento } from './forma-pagamento.entity';
 import { Receita } from './receita.entity';
 import { AuditoriaService } from './auditoria.service';
@@ -111,7 +119,7 @@ export class AppService {
     return contaId as number;
   }
 
-  async createReceita(usuarioId: number, body: any): Promise<Receita> {
+  async createReceita(usuarioId: number, body: CreateReceitaDto): Promise<Receita> {
     assertLancamento(body, ['data', 'valor', 'categoria', 'origem']);
     const contaId = await this.assertConta(usuarioId, body?.contaId);
     const salva = await this.receitas.save({
@@ -134,7 +142,7 @@ export class AppService {
     return salva;
   }
 
-  async createDespesa(usuarioId: number, body: any): Promise<Despesa | Despesa[]> {
+  async createDespesa(usuarioId: number, body: CreateDespesaDto): Promise<Despesa | Despesa[]> {
     assertLancamento(body, ['data', 'valor', 'categoria']);
     const contaId = await this.assertConta(usuarioId, body?.contaId);
     const totalParcelas = assertParcelas(body);
@@ -199,7 +207,7 @@ export class AppService {
     });
   }
 
-  async updateReceita(usuarioId: number, id: number, body: any): Promise<Receita> {
+  async updateReceita(usuarioId: number, id: number, body: UpdateReceitaDto): Promise<Receita> {
     assertLancamento(body, ['data', 'valor', 'categoria', 'origem']);
     const contaId = await this.assertConta(usuarioId, body?.contaId);
     const receita = await this.receitas.findOneBy({ id, usuarioId });
@@ -225,7 +233,7 @@ export class AppService {
     return salva;
   }
 
-  async updateDespesa(usuarioId: number, id: number, body: any): Promise<Despesa> {
+  async updateDespesa(usuarioId: number, id: number, body: UpdateDespesaDto): Promise<Despesa> {
     assertLancamento(body, ['data', 'valor', 'categoria']);
     const contaId = await this.assertConta(usuarioId, body?.contaId);
     const despesa = await this.despesas.findOneBy({ id, usuarioId });
@@ -469,7 +477,7 @@ export class AppService {
    */
   async importarOfx(
     usuarioId: number,
-    body: any,
+    body: ImportarOfxDto,
   ): Promise<{ receitas: number; despesas: number; ignorados: number }> {
     const contaId = await this.assertConta(usuarioId, body?.contaId);
     const categoriaReceita = body?.categoriaReceita?.trim?.() ?? '';
@@ -590,7 +598,7 @@ export class AppService {
    */
   async importar(
     usuarioId: number,
-    body: any,
+    body: ImportarBackupDto,
   ): Promise<{
     modo: string;
     categorias: number;
@@ -610,12 +618,13 @@ export class AppService {
     if (backup.app !== 'finfin') {
       throw new BadRequestException('Arquivo inválido — não é um backup do FinFin');
     }
-    for (const chave of ['contas', 'receitas', 'despesas', 'categorias', 'formasPagamento']) {
-      if (backup[chave] !== undefined && !Array.isArray(backup[chave])) {
+    for (const chave of ['contas', 'receitas', 'despesas', 'categorias', 'formasPagamento'] as const) {
+      const lista = backup[chave];
+      if (lista !== undefined && !Array.isArray(lista)) {
         throw new BadRequestException(`Campo "backup.${chave}" deve ser uma lista`);
       }
       // Mesmo teto do /importar/ofx — o limite do body não deve ser a única barreira.
-      if (Array.isArray(backup[chave]) && backup[chave].length > 2000) {
+      if (Array.isArray(lista) && lista.length > 2000) {
         throw new BadRequestException(`Limite de 2000 itens em "backup.${chave}"`);
       }
     }

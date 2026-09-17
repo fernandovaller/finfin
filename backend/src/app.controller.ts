@@ -1,6 +1,20 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
 import { AuthGuard } from './auth.guard';
+import {
+  CreateDespesaDto,
+  CreateReceitaDto,
+  ImportarBackupDto,
+  ImportarOfxDto,
+  UpdateDespesaDto,
+  UpdateReceitaDto,
+} from './dto/lancamentos.dto';
+import {
+  ContaQueryDto,
+  DeleteDespesaQueryDto,
+  ExportarCsvQueryDto,
+  ResumoQueryDto,
+} from './dto/consulta.dto';
 
 @Controller()
 @UseGuards(AuthGuard)
@@ -8,14 +22,13 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Post('receitas')
-  createReceita(@Req() req: any, @Body() body: any) {
+  createReceita(@Req() req: any, @Body() body: CreateReceitaDto) {
     return this.appService.createReceita(req.usuario.id, body);
   }
 
   @Get('receitas')
-  listReceitas(@Req() req: any, @Query('contaId') contaId?: string) {
-    const cid = contaId !== undefined && contaId !== '' ? Number(contaId) : undefined;
-    return this.appService.listReceitas(req.usuario.id, cid);
+  listReceitas(@Req() req: any, @Query() q: ContaQueryDto) {
+    return this.appService.listReceitas(req.usuario.id, q.contaId);
   }
 
   @Delete('receitas/:id')
@@ -25,39 +38,37 @@ export class AppController {
   }
 
   @Put('receitas/:id')
-  updateReceita(@Req() req: any, @Param('id', ParseIntPipe) id: number, @Body() body: any) {
+  updateReceita(@Req() req: any, @Param('id', ParseIntPipe) id: number, @Body() body: UpdateReceitaDto) {
     return this.appService.updateReceita(req.usuario.id, id, body);
   }
 
   @Post('despesas')
-  createDespesa(@Req() req: any, @Body() body: any) {
+  createDespesa(@Req() req: any, @Body() body: CreateDespesaDto) {
     return this.appService.createDespesa(req.usuario.id, body);
   }
 
   @Get('despesas')
-  listDespesas(@Req() req: any, @Query('contaId') contaId?: string) {
-    const cid = contaId !== undefined && contaId !== '' ? Number(contaId) : undefined;
-    return this.appService.listDespesas(req.usuario.id, cid);
+  listDespesas(@Req() req: any, @Query() q: ContaQueryDto) {
+    return this.appService.listDespesas(req.usuario.id, q.contaId);
   }
 
   @Delete('despesas/:id')
   deleteDespesa(
     @Req() req: any,
     @Param('id', ParseIntPipe) id: number,
-    @Query('escopo') escopo?: string,
+    @Query() q: DeleteDespesaQueryDto,
   ) {
-    return this.appService.deleteDespesa(req.usuario.id, id, escopo);
+    return this.appService.deleteDespesa(req.usuario.id, id, q.escopo);
   }
 
   @Put('despesas/:id')
-  updateDespesa(@Req() req: any, @Param('id', ParseIntPipe) id: number, @Body() body: any) {
+  updateDespesa(@Req() req: any, @Param('id', ParseIntPipe) id: number, @Body() body: UpdateDespesaDto) {
     return this.appService.updateDespesa(req.usuario.id, id, body);
   }
 
   @Get('resumo')
-  resumo(@Req() req: any, @Query('mes') mes?: string, @Query('contaId') contaId?: string) {
-    const cid = contaId !== undefined && contaId !== '' ? Number(contaId) : undefined;
-    return this.appService.resumo(req.usuario.id, mes, cid);
+  resumo(@Req() req: any, @Query() q: ResumoQueryDto) {
+    return this.appService.resumo(req.usuario.id, q.mes, q.contaId);
   }
 
   @Get('contagem')
@@ -71,17 +82,17 @@ export class AppController {
   }
 
   @Get('exportar/csv')
-  exportarCsv(@Req() req: any, @Query('tipo') tipo?: string) {
-    return this.appService.exportarCsv(req.usuario.id, tipo ?? '');
+  exportarCsv(@Req() req: any, @Query() q: ExportarCsvQueryDto) {
+    return this.appService.exportarCsv(req.usuario.id, q.tipo);
   }
 
   @Post('importar')
-  importar(@Req() req: any, @Body() body: any) {
+  importar(@Req() req: any, @Body() body: ImportarBackupDto) {
     return this.appService.importar(req.usuario.id, body);
   }
 
   @Post('importar/ofx')
-  importarOfx(@Req() req: any, @Body() body: any) {
+  importarOfx(@Req() req: any, @Body() body: ImportarOfxDto) {
     return this.appService.importarOfx(req.usuario.id, body);
   }
 
