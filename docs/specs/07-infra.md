@@ -24,8 +24,8 @@
   `chown node:node` no build.
 - `docker-compose.yml` (prod): backend sem `ports` (rede interna via nginx do
   frontend); env repassadas `RESEND_API_KEY/EMAIL_REMETENTE/FRONTEND_URL/
-  COOKIE_SECURE/CORS_ORIGINS` + `CONFIAR_PROXY=true`; `security_opt:
-  no-new-privileges:true`; healthcheck backend `GET /api/auth/eu`, frontend `wget /`;
+  COOKIE_SECURE/CORS_ORIGINS` +   `CONFIAR_PROXY=true`; `security_opt:
+  no-new-privileges:true`; healthcheck backend `GET /api/saude`, frontend `wget /`;
   `depends_on: service_healthy`. `docker-compose.override.yml` (dev local) reexpõe
   `backend ${BACKEND_PORT:-3001}:3001`.
 - `FRONTEND_URL` base do link de recuperação; `frontend/nginx.conf` proxy
@@ -35,7 +35,7 @@
 
 `TypeOrmModule.forRoot` (better-sqlite3, `data/finfin.sqlite`, `migrationsRun: true`,
 `synchronize` proibido, `:35`) + `forFeature` 9 entidades. Controllers
-`[Auth, App, Catalogo, Auditoria]` (`:41`). Providers + `APP_GUARD LimiteGuard`
+`[Auth, App, Catalogo, Auditoria, Saude]` (`:42`). Providers + `APP_GUARD LimiteGuard`
 (`:42-50`, roda antes do `AuthGuard`, `:48`).
 
 ## Guards

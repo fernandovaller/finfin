@@ -23,6 +23,7 @@ Toda resposta da API sai com `Cache-Control: no-store`.
 | `POST` | `/importar`, `/importar/ofx` | restaura backup / importa extrato OFX |
 | `DELETE` | `/dados/lancamentos`, `/dados/tudo` | apagão (mantém / apaga contas) |
 | `GET`/`POST`/`DELETE` | `/dados/demonstracao` | status / gera (409 se existe) / remove demo |
+| `GET` | `/saude` | pública, `@Limite(60)/min` → `{ok: true, app: 'finfin', versao: 1}` (app valida servidor/compatibilidade antes do login) |
 
 ## Catálogo
 

@@ -26,6 +26,7 @@ import { Auditoria1789561000000 } from './migrations/1789561000000-auditoria';
 import { Demo1789562000000 } from './migrations/1789562000000-demo';
 import { SessaoRefresh1789563000000 } from './migrations/1789563000000-sessao-refresh';
 import { RecuperacaoSenha } from './recuperacao-senha.entity';
+import { SaudeController } from './saude.controller';
 
 @Module({
   imports: [
@@ -39,7 +40,7 @@ import { RecuperacaoSenha } from './recuperacao-senha.entity';
     }),
     TypeOrmModule.forFeature([Receita, Despesa, Categoria, FormaPagamento, Conta, Usuario, Sessao, RecuperacaoSenha, Auditoria]),
   ],
-  controllers: [AuthController, AppController, CatalogoController, AuditoriaController],
+  controllers: [AuthController, AppController, CatalogoController, AuditoriaController, SaudeController],
   providers: [
     AuthService,
     AuthGuard,
