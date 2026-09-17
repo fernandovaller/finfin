@@ -13,6 +13,18 @@ export class Sessao {
   @Column()
   expiraEm: string;
 
+  /**
+   * access = Bearer curto (15 min, vai no header);
+   * refresh = longo (7 dias, vai no cookie HttpOnly).
+   * Nulo = sessão legada (era do localStorage), aceita como access até expirar.
+   */
+  @Column({ type: 'text', nullable: true })
+  tipo: 'access' | 'refresh' | null;
+
+  /** Access aponta para o refresh que o gerou (rotação/revogação em cascata). */
+  @Column({ type: 'text', nullable: true })
+  refreshToken: string | null;
+
   @Column({ default: () => 'CURRENT_TIMESTAMP' })
   criadoEm: string;
 }

@@ -50,7 +50,7 @@ Conceitos de domínio em `app.service.ts`:
 
 ### Frontend (frontend/src)
 
-- `main.tsx` — rotas com **HashRouter**; páginas em `pages/` dentro de `Layout` protegido por `RotaProtegida` + `AuthProvider` (`auth.tsx`, token em `localStorage` com chave `finfin_token`).
+- `main.tsx` — rotas com **HashRouter**; páginas em `pages/` dentro de `Layout` protegido por `RotaProtegida` + `AuthProvider` (`auth.tsx`, access de 15 min só em memória + refresh de 7 dias em cookie HttpOnly — nunca `localStorage`).
 - `api.ts` — único ponto de rede: wrapper `api<T>` injeta o Bearer, trata 401 (limpa token → "sessão expirada"; sem token, propaga o erro real de credenciais) e junta `message` de erro do Nest. Interfaces TS espelham as entidades do backend.
 - `ui.tsx` — primitivas compartilhadas: formatação BRL (`Intl` pt-BR), helpers de mês, `BadgeCategoria`, ícones SVG inline.
 - `LancamentoForm.tsx` — formulário reutilizável de receita/despesa (máscara BRL, parcelas).

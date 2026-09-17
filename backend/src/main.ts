@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
 import helmet from 'helmet';
 import { chmodSync, existsSync } from 'node:fs';
@@ -32,11 +33,14 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
   app.use(helmet());
+  app.use(cookieParser());
   // Em produção atrás de um proxy (nginx): descomente para o throttler enxergar
   // o IP real via X-Forwarded-For — senão todo cliente aparece como o IP do proxy.
   // app.set('trust proxy', 1);
   app.enableCors({
     origin: (origem, callback) => callback(null, !origem || ORIGENS_PERMITIDAS.has(origem)),
+    // O refresh viaja em cookie HttpOnly — o navegador só o envia com credentials.
+    credentials: true,
   });
   // Dados financeiros em arquivo local: sem leitura por outros usuários do host.
   // (caminho relativo ao cwd do backend, igual ao TypeORM)

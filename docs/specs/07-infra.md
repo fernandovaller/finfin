@@ -31,7 +31,7 @@
 | `receitas` | `id, data string, valor real, categoria, origem, formaPagamento '', contaId nullable, nota '', fitid nullable, usuarioId nullable, demo false` |
 | `despesas` | igual receita + `descricao ''` em vez de origem + `grupoParcela nullable, parcelaAtual/Total nullable` |
 | `usuarios` | `id, nome, email unique, senhaHash, avatar nullable, resendApiKey nullable, criadoEm` |
-| `sessoes` | `token PK, usuarioId, expiraEm, criadoEm` |
+| `sessoes` | `token PK, usuarioId, expiraEm, criadoEm, tipo: access\|refresh\|null, refreshToken nullable` |
 | `recuperacoes_senha` | `id, usuarioId, tokenHash unique, expiraEm, usadoEm nullable (uso único), criadoEm` |
 | `auditorias` | `id, usuarioId nullable, modulo, acao, registroId nullable, descricao '', detalhes text (JSON ≤ 8000), criadoEm` |
 
@@ -45,3 +45,5 @@
    FK usuário CASCADE).
 4. `1789561000000-auditoria` — cria `auditorias` (FK usuário sem cascade).
 5. `1789562000000-demo` — `ADD demo default 0` em receitas/despesas/contas; `down` no-op.
+6. `1789563000000-sessao-refresh` — `ADD tipo + refreshToken` em `sessoes` (idempotente;
+   linhas antigas ficam `NULL` e valem como access até expirarem).

@@ -47,15 +47,23 @@ const SEED_FORMAS: string[] = [
   '📱 Carteiras Digitais / NFC',
 ];
 
-/** Sessão válida por 7 dias. */
-const SESSAO_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/** Access (Bearer, só em memória no frontend) vale 15 minutos. */
+const ACCESS_TTL_MS = 15 * 60 * 1000;
+
+/** Refresh (cookie HttpOnly) vale 7 dias e é rotacionado a cada uso. */
+const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Link de recuperação vale por 1 hora e só pode ser usado uma vez. */
 const RECUPERACAO_TTL_MS = 60 * 60 * 1000;
 
 export interface SessaoCriada {
   usuario: UsuarioPublico;
+  /** Access token (15 min) — frontend guarda só em memória. */
   token: string;
+  /** Instante ISO em que o access expira (para o frontend agendar refresh). */
+  expiraEm: string;
+  /** Refresh token (7 dias) — vai para cookie HttpOnly, nunca para o JS. */
+  refreshToken: string;
 }
 
 export interface UsuarioPublico {
@@ -197,17 +205,61 @@ export class AuthService {
     return sessao;
   }
 
-  async logout(token: string): Promise<void> {
-    if (!token) return;
-    const sessao = await this.sessoes.findOneBy({ token });
-    if (sessao) {
-      await this.sessoes.delete({ token });
-      await this.auditoria.registrar(sessao.usuarioId, {
+  async logout(accessToken?: string, refreshToken?: string): Promise<void> {
+    if (!accessToken && !refreshToken) return;
+    let usuarioId: number | null = null;
+    if (accessToken) {
+      const sessao = await this.sessoes.findOneBy({ token: accessToken });
+      if (sessao) {
+        usuarioId = sessao.usuarioId;
+        await this.sessoes.delete({ token: accessToken });
+      }
+    }
+    if (refreshToken) {
+      const refresh = await this.sessoes.findOneBy({ token: refreshToken });
+      if (refresh) {
+        usuarioId ??= refresh.usuarioId;
+        // Derruba o refresh e os access que ele gerou.
+        await this.sessoes.delete({ refreshToken });
+        await this.sessoes.delete({ token: refreshToken });
+      }
+    }
+    if (usuarioId !== null) {
+      await this.auditoria.registrar(usuarioId, {
         modulo: 'auth',
         acao: 'logout',
         descricao: 'Logout',
       });
     }
+  }
+
+  /**
+   * Troca o refresh (cookie HttpOnly) por um par novo. Rotação: o refresh
+   * antigo e seus access morrem aqui — refresh reutilizado/roubado perde
+   * a validade no primeiro uso legítimo seguinte.
+   */
+  async refreshSessao(refreshToken: string): Promise<SessaoCriada> {
+    const atual = refreshToken?.trim();
+    if (!atual) throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
+    const refresh = await this.sessoes.findOneBy({ token: atual });
+    if (!refresh || (refresh.tipo !== null && refresh.tipo !== 'refresh')) {
+      throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
+    }
+    if (new Date(refresh.expiraEm).getTime() < Date.now()) {
+      await this.sessoes.delete({ refreshToken: atual });
+      await this.sessoes.delete({ token: atual });
+      throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
+    }
+    const usuario = await this.usuarios.findOneBy({ id: refresh.usuarioId });
+    if (!usuario) {
+      await this.sessoes.delete({ refreshToken: atual });
+      await this.sessoes.delete({ token: atual });
+      throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
+    }
+    // Rotação antes de emitir o par novo (janela mínima de reuso).
+    await this.sessoes.delete({ refreshToken: atual });
+    await this.sessoes.delete({ token: atual });
+    return this.abrirSessao(usuario);
   }
 
   /** Atualiza nome/email/avatar do dono. Avatar = dataURL de imagem ou null (remove). */
@@ -392,11 +444,18 @@ export class AuthService {
     return { ok: true };
   }
 
-  /** Resolve o dono a partir do token Bearer; null quando ausente/inválido/expirado. */
+  /**
+   * Resolve o dono a partir do access Bearer; null quando ausente/inválido/expirado.
+   * Refresh nunca autentica rota — só o POST /auth/refresh o aceita, via cookie.
+   * Sessões legadas (tipo NULL, era do localStorage) valem como access até expirarem.
+   */
   async donoDoToken(cabecalho: string | undefined): Promise<Usuario | null> {
     const token = (cabecalho ?? '').replace(/^Bearer\s+/i, '').trim();
     if (!token) return null;
     const sessao = await this.sessoes.findOneBy({ token });
+    if (!sessao) return null;
+    // Refresh nunca autentica rota — só o POST /auth/refresh o aceita, via cookie.
+    if ((sessao as Sessao).tipo === 'refresh') return null;
     if (!sessao || new Date(sessao.expiraEm).getTime() < Date.now()) {
       if (sessao) await this.sessoes.delete({ token });
       return null;
@@ -432,11 +491,15 @@ export class AuthService {
     if (error) throw new Error(error.message);
   }
 
+  /** Emite o par access (15 min) + refresh (7 dias, rotativo). */
   private async abrirSessao(usuario: Usuario): Promise<SessaoCriada> {
     const token = randomBytes(32).toString('hex');
-    const expiraEm = new Date(Date.now() + SESSAO_TTL_MS).toISOString();
-    await this.sessoes.save({ token, usuarioId: usuario.id, expiraEm });
-    return { usuario: publico(usuario), token };
+    const refreshToken = randomBytes(32).toString('hex');
+    const expiraEm = new Date(Date.now() + ACCESS_TTL_MS).toISOString();
+    const expiraRefresh = new Date(Date.now() + REFRESH_TTL_MS).toISOString();
+    await this.sessoes.save({ token: refreshToken, usuarioId: usuario.id, expiraEm: expiraRefresh, tipo: 'refresh', refreshToken: null });
+    await this.sessoes.save({ token, usuarioId: usuario.id, expiraEm, tipo: 'access', refreshToken });
+    return { usuario: publico(usuario), token, expiraEm, refreshToken };
   }
 
   /**

@@ -16,6 +16,7 @@
     "@nestjs/platform-express": "^10.4.0",
     "@nestjs/typeorm": "^12.0.1",
     "better-sqlite3": "^12.11.1",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
     "helmet": "^7.2.0",
     "reflect-metadata": "^0.2.2",
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.0",
+    "@types/cookie-parser": "^1.4.10",
     "@types/node": "^22.0.0",
     "typescript": "^5.6.0"
   }

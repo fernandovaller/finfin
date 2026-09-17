@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import { cadastro as apiCadastro, clearToken, eu, getToken, login as apiLogin, logout as apiLogout, setToken, type Usuario } from './api';
+import { cadastro as apiCadastro, clearToken, eu, login as apiLogin, logout as apiLogout, refreshAccess, setToken, type Usuario } from './api';
 
 interface AuthEstado {
   usuario: Usuario | null;
@@ -18,12 +18,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let ativo = true;
-    if (!getToken()) {
-      setCarregando(false);
-      return;
-    }
-    eu()
-      .then(({ usuario }) => ativo && setUsuario(usuario))
+    // A memória zera no F5 — o refresh (cookie HttpOnly) reconstrói o access.
+    refreshAccess()
+      .then((token) => {
+        if (!ativo || !token) return null;
+        return eu();
+      })
+      .then((r) => ativo && setUsuario(r?.usuario ?? null))
       .catch(() => ativo && setUsuario(null))
       .finally(() => ativo && setCarregando(false));
     return () => {
@@ -46,8 +47,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const sair = useCallback(async () => {
-    await apiLogout();
-    setUsuario(null);
+    try {
+      await apiLogout();
+    } finally {
+      clearToken();
+      setUsuario(null);
+    }
   }, []);
 
   const sincronizar = useCallback((u: Usuario) => setUsuario(u), []);

@@ -1,7 +1,26 @@
-import { Body, Controller, Get, Headers, HttpCode, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Post, Put, Req, Res, UseGuards } from '@nestjs/common';
+import type { CookieOptions, Response } from 'express';
 import { AuthGuard } from './auth.guard';
 import { AuthService, UsuarioPublico } from './auth.service';
 import { Limite } from './limite.guard';
+
+/** Nome do cookie do refresh (nunca lido pelo JS: HttpOnly). */
+export const COOKIE_REFRESH = 'finfin_refresh';
+/** Refresh dura 7 dias — igual ao REFRESH_TTL_MS do service. */
+const COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function opcoesCookieRefresh(): CookieOptions {
+  return {
+    httpOnly: true,
+    // O refresh só circula entre o navegador e /api/auth (login/refresh/logout).
+    // Não é enviado às rotas de dados — superfície de CSRF mínima.
+    path: '/api/auth',
+    sameSite: 'strict',
+    // Em dev (http://localhost) o navegador rejeita Secure; em produção
+    // (https) ligue com COOKIE_SECURE=true.
+    secure: process.env.COOKIE_SECURE === 'true',
+  };
+}
 
 @Controller('auth')
 export class AuthController {
@@ -10,21 +29,43 @@ export class AuthController {
   /** 10 tentativas por minuto por IP — freia força bruta e DoS de CPU via scrypt. */
   @Post('cadastro')
   @Limite(10)
-  cadastro(@Body() body: any) {
-    return this.auth.cadastro(body);
+  async cadastro(@Body() body: any, @Res({ passthrough: true }) res: Response) {
+    const sessao = await this.auth.cadastro(body);
+    res.cookie(COOKIE_REFRESH, sessao.refreshToken, { ...opcoesCookieRefresh(), maxAge: COOKIE_MAX_AGE_MS });
+    return { usuario: sessao.usuario, token: sessao.token, expiraEm: sessao.expiraEm };
   }
 
   @Post('login')
   @Limite(10)
-  login(@Body() body: any) {
-    return this.auth.login(body);
+  async login(@Body() body: any, @Res({ passthrough: true }) res: Response) {
+    const sessao = await this.auth.login(body);
+    res.cookie(COOKIE_REFRESH, sessao.refreshToken, { ...opcoesCookieRefresh(), maxAge: COOKIE_MAX_AGE_MS });
+    return { usuario: sessao.usuario, token: sessao.token, expiraEm: sessao.expiraEm };
+  }
+
+  /**
+   * Renova o access (15 min) usando o refresh do cookie HttpOnly.
+   * Rotação: cada chamada invalida o refresh anterior e emite par novo.
+   */
+  @Post('refresh')
+  @Limite(30)
+  async refresh(@Req() req: any, @Res({ passthrough: true }) res: Response) {
+    const sessao = await this.auth.refreshSessao(req.cookies?.[COOKIE_REFRESH] ?? '');
+    res.cookie(COOKIE_REFRESH, sessao.refreshToken, { ...opcoesCookieRefresh(), maxAge: COOKIE_MAX_AGE_MS });
+    return { usuario: sessao.usuario, token: sessao.token, expiraEm: sessao.expiraEm };
   }
 
   @Post('logout')
   @HttpCode(204)
-  logout(@Headers('authorization') autorizacao?: string) {
+  async logout(
+    @Headers('authorization') autorizacao: string | undefined,
+    @Req() req: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const token = (autorizacao ?? '').replace(/^Bearer\s+/i, '').trim();
-    return this.auth.logout(token);
+    await this.auth.logout(token, req.cookies?.[COOKIE_REFRESH]);
+    res.clearCookie(COOKIE_REFRESH, opcoesCookieRefresh());
+    return;
   }
 
   @Get('eu')

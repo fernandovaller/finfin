@@ -1,6 +1,9 @@
 # 10 — Referência da API
 
-Base `http://localhost:3001/api`. Protegidas exigem `Authorization: Bearer <token>`.
+Base `http://localhost:3001/api`. Protegidas exigem `Authorization: Bearer <token>`
+(access de 15 min, só em memória no frontend). O refresh (7 dias) viaja em cookie
+HttpOnly `finfin_refresh` — `POST /auth/refresh` o rotaciona; frontend envia
+`credentials: include`.
 
 ## Lançamentos e dados
 
@@ -33,8 +36,9 @@ Base `http://localhost:3001/api`. Protegidas exigem `Authorization: Bearer <toke
 
 | Método | Rota | Descrição |
 |---|---|---|
-| `POST`/`GET` | `/auth/cadastro`, `/auth/login`, `/auth/eu` | cria conta / entra / sessão atual (eu nunca 401) |
-| `POST` | `/auth/logout` | encerra a sessão (204) |
+| `POST`/`GET` | `/auth/cadastro`, `/auth/login`, `/auth/eu` | cria conta / entra / sessão atual (eu nunca 401; login/cadastro devolvem `{usuario, token, expiraEm}` + cookie refresh) |
+| `POST` | `/auth/refresh` | rotaciona o refresh (cookie) → access novo |
+| `POST` | `/auth/logout` | encerra access + refresh (204, limpa cookie) |
 | `PUT` | `/auth/perfil`, `/auth/senha` | atualiza perfil / troca senha (derruba outras sessões) |
 | `GET`/`PUT` | `/auth/integracoes` | status / salva chave Resend |
 | `POST` | `/auth/recuperar-senha`, `/auth/redefinir-senha` | recuperação por e-mail (sempre `{ok: true}`) |

@@ -64,46 +64,104 @@ export interface Usuario {
 
 export interface SessaoCriada {
   usuario: Usuario;
+  /** Access (15 min) — guardado só em memória, nunca em storage. */
   token: string;
+  /** Instante ISO em que o access expira. */
+  expiraEm: string;
 }
 
-const TOKEN_KEY = 'finfin_token';
+/**
+ * Access vive só em memória: some no F5 e volta via refresh (cookie
+ * HttpOnly que o JS não lê). XSS não encontra token em storage.
+ */
+let accessToken: string | null = null;
+/** Uma única renovação em voo — chamadas concorrentes esperam a mesma. */
+let refreshEmVoo: Promise<string | null> | null = null;
 
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+  return accessToken;
 }
 
 export function setToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
+  accessToken = token;
 }
 
 export function clearToken(): void {
-  localStorage.removeItem(TOKEN_KEY);
+  accessToken = null;
+  refreshEmVoo = null;
+}
+
+/** Troca o refresh (cookie HttpOnly) por um access novo, com rotação no servidor. */
+export async function refreshAccess(): Promise<string | null> {
+  if (refreshEmVoo) return refreshEmVoo;
+  refreshEmVoo = (async () => {
+    try {
+      const res = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' });
+      if (!res.ok) {
+        clearToken();
+        return null;
+      }
+      const sessao = (await res.json()) as SessaoCriada;
+      accessToken = sessao.token;
+      return accessToken;
+    } catch {
+      clearToken();
+      return null;
+    }
+  })();
+  try {
+    return await refreshEmVoo;
+  } finally {
+    refreshEmVoo = null;
+  }
+}
+
+/**
+ * Rotas públicas de auth: 401 aqui é erro real (credenciais/token de e-mail),
+ * nunca "sessão expirada" — não tenta refresh para não mascarar a mensagem.
+ */
+function rotaSemRefresh(path: string): boolean {
+  return (
+    path.startsWith('/api/auth/login') ||
+    path.startsWith('/api/auth/cadastro') ||
+    path.startsWith('/api/auth/refresh') ||
+    path.startsWith('/api/auth/recuperar-senha') ||
+    path.startsWith('/api/auth/redefinir-senha') ||
+    path.startsWith('/api/auth/logout')
+  );
+}
+
+async function lerErro(res: Response): Promise<string> {
+  const body = await res.json().catch(() => ({}));
+  const msg = (body as { message?: unknown }).message;
+  return Array.isArray(msg) ? msg.join('; ') : ((msg as string) ?? res.statusText);
 }
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  const token = getToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(path, {
-    ...init,
-    headers: { ...headers, ...(init?.headers as Record<string, string> | undefined) },
-  });
-  if (res.status === 401 && token) {
-    // 401 em chamada autenticada = sessão inválida/expirada.
-    // Sem token (ex.: /auth/login) o 401 é erro de credenciais — propaga a mensagem real.
-    clearToken();
-    throw new Error('Sessão expirada — faça login novamente');
-  }
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    const msg = Array.isArray((body as { message?: unknown }).message)
-      ? (body as { message: string[] }).message.join('; ')
-      : ((body as { message?: string }).message ?? res.statusText);
-    throw new Error(msg);
-  }
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  const semRefresh = rotaSemRefresh(path);
+  const tenta = async (tentativa: number): Promise<T> => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+    const res = await fetch(path, {
+      ...init,
+      credentials: 'include', // envia o cookie do refresh quando preciso
+      headers: { ...headers, ...(init?.headers as Record<string, string> | undefined) },
+    });
+    if (res.status === 401 && !semRefresh && tentativa === 0) {
+      // Access expirado/nulo (ex.: F5 limpou a memória): renova e repete 1 vez.
+      const novo = await refreshAccess();
+      if (novo) return tenta(1);
+      throw new Error('Sessão expirada — faça login novamente');
+    }
+    if (res.status === 401 && accessToken && !semRefresh) {
+      clearToken();
+      throw new Error('Sessão expirada — faça login novamente');
+    }
+    if (!res.ok) throw new Error(await lerErro(res));
+    if (res.status === 204) return undefined as T;
+    return res.json() as Promise<T>;
+  };
+  return tenta(0);
 }
 
 export function cadastro(nome: string, email: string, senha: string): Promise<SessaoCriada> {

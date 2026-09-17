@@ -12,17 +12,21 @@
 `<Navigate to="/login" replace />`. Provedores: `ProvedorAparencia > AuthProvider >
 HashRouter` (`:37-38`), `StrictMode` (`:36`).
 
-## Sessão (`auth.tsx`, `api.ts:70-107`)
+## Sessão (`auth.tsx`, `api.ts`)
 
-- Token em `localStorage` chave `finfin_token` (`api.ts:70-82`).
-- Boot: sem token → `carregando = false`; com token → `GET /api/auth/eu` (`auth.tsx:19-32`).
+- Access (15 min) só em memória (`api.ts`); refresh (7 dias) em cookie HttpOnly
+  `finfin_refresh` que o JS não lê. Nada de token em `localStorage`.
+- Boot: `refreshAccess()` reconstrói o access via `POST /api/auth/refresh`, depois
+  `GET /api/auth/eu` (`auth.tsx`).
 - `entrar/criarConta` fazem `clearToken()` antes (401 vira erro de credenciais, não
-  "sessão expirada"), depois `setToken + setUsuario` (`:34-46`).
-- `api(path, init)` injeta `Content-Type` + Bearer (`:85-87`); `401 com token` →
-  `clearToken()` + throw `Sessão expirada...`; `401 sem token` propaga msg real;
-  `!ok` extrai `body.message` (array → join `; `); `204 → undefined`.
-- `sair`: `apiLogout()` + `setUsuario(null)`; `sincronizar(u)` atualiza após PUT
-  perfil/senha. Layout: `onSair → sair() + navegar('/login')` (`Layout.tsx:86-89`).
+  "sessão expirada"), depois `setToken + setUsuario`.
+- `api(path, init)` usa `credentials: include` e injeta Bearer da memória; 401 em rota
+  protegida → 1 refresh + 1 retry; se falhar → `clearToken()` + throw
+  `Sessão expirada...`. Rotas `/api/auth/login|cadastro|refresh|recuperar|redefinir|logout`
+  nunca disparam refresh (propagam o erro real). Renovação concorrente compartilha
+  uma única promise (`refreshEmVoo`).
+- `sair`: `apiLogout()` + `clearToken()` em `finally` + `setUsuario(null)`.
+  `sincronizar(u)` atualiza após PUT perfil/senha. Layout: `onSair → sair() + navegar('/login')` (`Layout.tsx:86-89`).
 
 ## Shell (`Layout.tsx`)
 

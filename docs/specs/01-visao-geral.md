@@ -34,8 +34,10 @@ tema claro/escuro e largura fluida/fixa.
 
 ## Multiusuário
 
-- Toda rota protegida usa `AuthGuard`, que resolve o Bearer na tabela `sessoes`
-  (TTL 7 dias) e injeta `req.usuario` (`backend/src/auth.guard.ts:5-14`).
+- Toda rota protegida usa `AuthGuard`, que resolve o access Bearer (15 min, só em
+  memória no frontend) na tabela `sessoes` e injeta `req.usuario`
+  (`backend/src/auth.guard.ts:5-14`). O refresh (7 dias, rotativo) viaja em cookie
+  HttpOnly e só serve ao `POST /auth/refresh`.
 - Controllers extraem `req.usuario.id` e passam `usuarioId` ao service.
 - Toda query é escopada por `usuarioId`; nunca busca por id sem o dono.
 - Entidades de lançamento/catálogo têm `usuarioId` nullable (era pré-login).

@@ -6,19 +6,27 @@ Base `auth.controller.ts` = `@Controller('auth')` (`:6`).
 
 - Hash `scrypt(senha, salt16, 64)` formato `salt:hash` hex (`:89-93`); confere com
   `timingSafeEqual` (`:95-102`).
-- Sessão: token `randomBytes(32).hex` (`:436`), TTL 7 dias (`:51`), tabela `sessoes`
-  (`token` PK, `usuarioId`, `expiraEm`, `criadoEm`).
+- Sessão em par: access `randomBytes(32).hex` TTL 15 min (Bearer, só em memória no
+  frontend) + refresh `randomBytes(32).hex` TTL 7 dias rotativo (cookie HttpOnly
+  `finfin_refresh`, `Path=/api/auth`, `SameSite=Strict`). Tabela `sessoes`
+  (`token` PK, `usuarioId`, `expiraEm`, `criadoEm`, `tipo: access|refresh|null`,
+  `refreshToken` — access aponta para o refresh que o gerou). Legado (`tipo` NULL,
+  era do localStorage) vale como access até expirar.
 - `onModuleInit` limpa expiradas (`:153-155`).
-- `donoDoToken` (`:396-405`): parse Bearer; expirado → deleta + `null`.
+- `donoDoToken`: parse Bearer; refresh nunca autentica rota; expirado → deleta + `null`.
+- `refreshSessao`: valida o refresh do cookie, rotaciona (apaga refresh antigo + seus
+  access) e emite par novo. `logout(access?, refresh?)`: apaga o access, o refresh e
+  os access dele + limpa o cookie.
 - `AuthGuard` (`auth.guard.ts:5-14`): sem dono válido → 401 `Sessão inválida ou expirada`.
 
 ## Rotas
 
 | Rota | Acesso | I/O |
 |---|---|---|
-| `POST /auth/cadastro` (`:11`) | pública, `@Limite(10)/min` | `{nome, email, senha}` → `{usuario, token}` |
-| `POST /auth/login` (`:17`) | pública, `@Limite(10)` | `{email, senha}` → `{usuario, token}` + auditoria `auth/login` |
-| `POST /auth/logout` 204 (`:23`) | pública, lê Bearer manual (`:26`) | deleta sessão se existir + auditoria |
+| `POST /auth/cadastro` | pública, `@Limite(10)/min` | `{nome, email, senha}` → `{usuario, token, expiraEm}` + cookie refresh |
+| `POST /auth/login` | pública, `@Limite(10)` | `{email, senha}` → `{usuario, token, expiraEm}` + cookie refresh + auditoria `auth/login` |
+| `POST /auth/refresh` | pública (cookie), `@Limite(30)` | rotaciona refresh → `{usuario, token, expiraEm}` + cookie novo |
+| `POST /auth/logout` 204 | pública, lê Bearer + cookie | apaga access/refresh + limpa cookie + auditoria |
 | `GET /auth/eu` (`:30`) | pública, `donoDoToken` manual (`:32`) | `{usuario \| null}` — nunca 401 |
 | `PUT /auth/perfil` (`:39`) | `AuthGuard` | `{nome?, email?, avatar?}` → `{usuario}` |
 | `PUT /auth/senha` (`:45`) | `AuthGuard`, extrai `tokenAtual` (`:48`) | `{senhaAtual, novaSenha}` → revoga outras sessões |
