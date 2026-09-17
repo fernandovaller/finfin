@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type Despesa, type Receita } from '../api';
+import { localeIntl } from '../i18n';
 import {
   AlertaErro,
   BRL,
@@ -66,6 +68,7 @@ function parseValorBR(s: string): number | null {
 }
 
 export default function Relatorios() {
+  const { t } = useTranslation();
   const [mes, setMes] = useState(mesAtual);
   const [receitas, setReceitas] = useState<Receita[]>([]);
   const [despesas, setDespesas] = useState<Despesa[]>([]);
@@ -98,7 +101,7 @@ export default function Relatorios() {
         setErro('');
         setSincronizadoEm(new Date());
       })
-      .catch((e) => ativo && setErro(e instanceof Error ? e.message : 'Falha ao carregar dados'))
+      .catch((e) => ativo && setErro(e instanceof Error ? e.message : t('comum.falhaCarregar')))
       .finally(() => ativo && setCarregando(false));
     return () => {
       ativo = false;
@@ -170,11 +173,12 @@ export default function Relatorios() {
   const porForma = useMemo(() => {
     const mapa = new Map<string, { total: number; qtd: number }>();
     for (const d of desFil) {
-      const nome = d.formaPagamento || 'Não informada';
+      const nome = d.formaPagamento || t('relatorios.naoInformada');
       const atual = mapa.get(nome) ?? { total: 0, qtd: 0 };
       mapa.set(nome, { total: atual.total + d.valor, qtd: atual.qtd + 1 });
     }
     return [...mapa.entries()].sort((a, b) => b[1].total - a[1].total);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [desFil]);
 
   const topDes = useMemo(() => [...desFil].sort((a, b) => b.valor - a.valor).slice(0, 5), [desFil]);
@@ -193,16 +197,17 @@ export default function Relatorios() {
   const porConta = useMemo(() => {
     const mapa = new Map<string, { rec: number; des: number }>();
     for (const r of recFil) {
-      const nome = contaPorId(r.contaId) || 'Sem conta';
+      const nome = contaPorId(r.contaId) || t('relatorios.semConta');
       const atual = mapa.get(nome) ?? { rec: 0, des: 0 };
       mapa.set(nome, { ...atual, rec: atual.rec + r.valor });
     }
     for (const d of desFil) {
-      const nome = contaPorId(d.contaId) || 'Sem conta';
+      const nome = contaPorId(d.contaId) || t('relatorios.semConta');
       const atual = mapa.get(nome) ?? { rec: 0, des: 0 };
       mapa.set(nome, { ...atual, des: atual.des + d.valor });
     }
     return [...mapa.entries()].sort((a, b) => b[1].rec - b[1].des - (a[1].rec - a[1].des));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recFil, desFil, contaPorId]);
 
   const filtrosAtivos =
@@ -231,20 +236,22 @@ export default function Relatorios() {
   }
 
   function resumoFiltros(): string {
-    const partes: string[] = [`Período: ${periodoLabel}`];
-    partes.push(`Conta: ${contaFiltro === '' ? 'todas' : esc(contaPorId(contaFiltro) || String(contaFiltro))}`);
-    if (catRec.length) partes.push(`Cat. receita: ${catRec.map(esc).join(', ')}`);
-    if (catDes.length) partes.push(`Cat. despesa: ${catDes.map(esc).join(', ')}`);
-    if (formaSel.length) partes.push(`Formas: ${formaSel.map((f) => (f === '' ? 'Não informada' : esc(f))).join(', ')}`);
-    if (buscaN) partes.push(`Busca: “${esc(busca.trim())}”`);
-    if (minNum != null) partes.push(`Mín: ${esc(BRL.format(minNum))}`);
-    if (maxNum != null) partes.push(`Máx: ${esc(BRL.format(maxNum))}`);
+    const partes: string[] = [t('relatorios.fPeriodo', { v: periodoLabel })];
+    partes.push(t('relatorios.fConta', { v: contaFiltro === '' ? t('relatorios.fTodas') : esc(contaPorId(contaFiltro) || String(contaFiltro)) }));
+    if (catRec.length) partes.push(t('relatorios.fCatRec', { v: catRec.map(esc).join(', ') }));
+    if (catDes.length) partes.push(t('relatorios.fCatDes', { v: catDes.map(esc).join(', ') }));
+    if (formaSel.length) partes.push(t('relatorios.fFormas', { v: formaSel.map((f) => (f === '' ? t('relatorios.naoInformada') : esc(f))).join(', ') }));
+    if (buscaN) partes.push(t('relatorios.fBusca', { v: esc(busca.trim()) }));
+    if (minNum != null) partes.push(t('relatorios.fMin', { v: esc(BRL.format(minNum)) }));
+    if (maxNum != null) partes.push(t('relatorios.fMax', { v: esc(BRL.format(maxNum)) }));
     return partes.join(' · ');
   }
 
   function exportarPDF() {
     const linhas = (rows: string[]) => rows.join('');
-    const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório finfin — ${esc(periodoLabel)}</title>
+    const decSep = localeIntl() === 'en-US' ? '.' : ',';
+    const pct = (v: number, total: number) => (total ? ((v / total) * 100).toFixed(1).replace('.', decSep) : `0${decSep}0`);
+    const html = `<!doctype html><html lang="${localeIntl()}"><head><meta charset="utf-8"><title>${esc(t('relatorios.pdfTitulo', { periodo: periodoLabel }))}</title>
 <style>
 body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:32px}
 h1{font-size:20px;margin:0 0 4px}h2{font-size:14px;margin:24px 0 8px;text-transform:uppercase;letter-spacing:.04em;color:#334155}
@@ -253,47 +260,47 @@ h1{font-size:20px;margin:0 0 4px}h2{font-size:14px;margin:24px 0 8px;text-transf
 table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;font-size:11px;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;padding:6px}td{border-bottom:1px solid #f1f5f9;padding:6px}.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 @media print{.no-print{display:none}}
 </style></head><body>
-<h1>Relatório finfin</h1>
-<p class="meta">${resumoFiltros()} · gerado em ${esc(new Date().toLocaleString('pt-BR'))}</p>
+<h1>${esc(t('relatorios.pdfH1'))}</h1>
+<p class="meta">${resumoFiltros()} · ${esc(t('relatorios.pdfGeradoEm', { data: new Date().toLocaleString(localeIntl()) }))}</p>
 <div class="cards">
-<div class="card"><p>Receitas (${recFil.length})</p><strong>${esc(BRL.format(totalRec))}</strong><p>ticket ${esc(BRL.format(ticketRec))}</p></div>
-<div class="card"><p>Despesas (${desFil.length})</p><strong>${esc(BRL.format(totalDes))}</strong><p>ticket ${esc(BRL.format(ticketDes))}</p></div>
-<div class="card"><p>Saldo</p><strong>${esc(BRL.format(totalRec - totalDes))}</strong><p>${recFil.length + desFil.length} lançamentos</p></div>
+<div class="card"><p>${esc(t('relatorios.receitasLabel'))} (${recFil.length})</p><strong>${esc(BRL.format(totalRec))}</strong><p>${esc(t('relatorios.pdfTicket', { valor: BRL.format(ticketRec) }))}</p></div>
+<div class="card"><p>${esc(t('relatorios.despesasLabel'))} (${desFil.length})</p><strong>${esc(BRL.format(totalDes))}</strong><p>${esc(t('relatorios.pdfTicket', { valor: BRL.format(ticketDes) }))}</p></div>
+<div class="card"><p>${esc(t('relatorios.thSaldo'))}</p><strong>${esc(BRL.format(totalRec - totalDes))}</strong><p>${esc(t('relatorios.pdfLancamentos', { n: recFil.length + desFil.length }))}</p></div>
 </div>
-<h2>Despesas por categoria</h2>
-<table><thead><tr><th>Categoria</th><th class="num">Total</th><th class="num">%</th></tr></thead><tbody>
-${linhas(porCatDes.map(([n, t]) => `<tr><td>${esc(n)}</td><td class="num">${esc(BRL.format(t))}</td><td class="num">${totalDes ? ((t / totalDes) * 100).toFixed(1).replace('.', ',') : '0,0'}%</td></tr>`)) || '<tr><td colspan="3">Sem despesas no filtro.</td></tr>'}
+<h2>${esc(t('relatorios.pdfHDesCat'))}</h2>
+<table><thead><tr><th>${esc(t('relatorios.pdfThCategoria'))}</th><th class="num">${esc(t('relatorios.pdfThTotal'))}</th><th class="num">%</th></tr></thead><tbody>
+${linhas(porCatDes.map(([n, v]) => `<tr><td>${esc(n)}</td><td class="num">${esc(BRL.format(v))}</td><td class="num">${pct(v, totalDes)}%</td></tr>`)) || `<tr><td colspan="3">${esc(t('relatorios.pdfSemDes'))}</td></tr>`}
 </tbody></table>
-<h2>Receitas por categoria</h2>
-<table><thead><tr><th>Categoria</th><th class="num">Total</th><th class="num">%</th></tr></thead><tbody>
-${linhas(porCatRec.map(([n, t]) => `<tr><td>${esc(n)}</td><td class="num">${esc(BRL.format(t))}</td><td class="num">${totalRec ? ((t / totalRec) * 100).toFixed(1).replace('.', ',') : '0,0'}%</td></tr>`)) || '<tr><td colspan="3">Sem receitas no filtro.</td></tr>'}
+<h2>${esc(t('relatorios.pdfHRecCat'))}</h2>
+<table><thead><tr><th>${esc(t('relatorios.pdfThCategoria'))}</th><th class="num">${esc(t('relatorios.pdfThTotal'))}</th><th class="num">%</th></tr></thead><tbody>
+${linhas(porCatRec.map(([n, v]) => `<tr><td>${esc(n)}</td><td class="num">${esc(BRL.format(v))}</td><td class="num">${pct(v, totalRec)}%</td></tr>`)) || `<tr><td colspan="3">${esc(t('relatorios.pdfSemRec'))}</td></tr>`}
 </tbody></table>
-<h2>Despesas por forma de pagamento</h2>
-<table><thead><tr><th>Forma</th><th class="num">Qtd</th><th class="num">Total</th></tr></thead><tbody>
-${linhas(porForma.map(([n, v]) => `<tr><td>${esc(n)}</td><td class="num">×${v.qtd}</td><td class="num">${esc(BRL.format(v.total))}</td></tr>`)) || '<tr><td colspan="3">Sem despesas no filtro.</td></tr>'}
+<h2>${esc(t('relatorios.pdfHForma'))}</h2>
+<table><thead><tr><th>${esc(t('relatorios.pdfThForma'))}</th><th class="num">${esc(t('relatorios.pdfThQtd'))}</th><th class="num">${esc(t('relatorios.pdfThTotal'))}</th></tr></thead><tbody>
+${linhas(porForma.map(([n, v]) => `<tr><td>${esc(n)}</td><td class="num">×${v.qtd}</td><td class="num">${esc(BRL.format(v.total))}</td></tr>`)) || `<tr><td colspan="3">${esc(t('relatorios.pdfSemDes'))}</td></tr>`}
 </tbody></table>
-<h2>Por conta</h2>
-<table><thead><tr><th>Conta</th><th class="num">Receitas</th><th class="num">Despesas</th><th class="num">Saldo</th></tr></thead><tbody>
-${linhas(porConta.map(([n, v]) => `<tr><td>${esc(n)}</td><td class="num">${esc(BRL.format(v.rec))}</td><td class="num">${esc(BRL.format(v.des))}</td><td class="num">${esc(BRL.format(v.rec - v.des))}</td></tr>`)) || '<tr><td colspan="4">Sem movimentos no filtro.</td></tr>'}
+<h2>${esc(t('relatorios.pdfHConta'))}</h2>
+<table><thead><tr><th>${esc(t('relatorios.pdfThConta'))}</th><th class="num">${esc(t('relatorios.pdfThReceitas'))}</th><th class="num">${esc(t('relatorios.pdfThDespesas'))}</th><th class="num">${esc(t('relatorios.pdfThSaldo'))}</th></tr></thead><tbody>
+${linhas(porConta.map(([n, v]) => `<tr><td>${esc(n)}</td><td class="num">${esc(BRL.format(v.rec))}</td><td class="num">${esc(BRL.format(v.des))}</td><td class="num">${esc(BRL.format(v.rec - v.des))}</td></tr>`)) || `<tr><td colspan="4">${esc(t('relatorios.pdfSemMov'))}</td></tr>`}
 </tbody></table>
-<h2>Top despesas</h2>
-<table><thead><tr><th>Descrição</th><th>Data</th><th>Categoria</th><th class="num">Valor</th></tr></thead><tbody>
+<h2>${esc(t('relatorios.pdfHTopDes'))}</h2>
+<table><thead><tr><th>${esc(t('relatorios.pdfThDescricao'))}</th><th>${esc(t('relatorios.pdfThData'))}</th><th>${esc(t('relatorios.pdfThCategoria'))}</th><th class="num">${esc(t('relatorios.pdfThValor'))}</th></tr></thead><tbody>
 ${linhas(topDes.map((d) => `<tr><td>${esc(d.descricao || d.categoria)}</td><td>${esc(d.data.split('-').reverse().join('/'))}</td><td>${esc(d.categoria)}</td><td class="num">${esc(BRL.format(d.valor))}</td></tr>`)) || '<tr><td colspan="4">—</td></tr>'}
 </tbody></table>
-<h2>Top receitas</h2>
-<table><thead><tr><th>Origem</th><th>Data</th><th>Categoria</th><th class="num">Valor</th></tr></thead><tbody>
+<h2>${esc(t('relatorios.pdfHTopRec'))}</h2>
+<table><thead><tr><th>${esc(t('relatorios.pdfThOrigem'))}</th><th>${esc(t('relatorios.pdfThData'))}</th><th>${esc(t('relatorios.pdfThCategoria'))}</th><th class="num">${esc(t('relatorios.pdfThValor'))}</th></tr></thead><tbody>
 ${linhas(topRec.map((r) => `<tr><td>${esc(r.origem)}</td><td>${esc(r.data.split('-').reverse().join('/'))}</td><td>${esc(r.categoria)}</td><td class="num">${esc(BRL.format(r.valor))}</td></tr>`)) || '<tr><td colspan="4">—</td></tr>'}
 </tbody></table>
-<h2>Evolução</h2>
-<table><thead><tr><th>Mês</th><th class="num">Receitas</th><th class="num">Despesas</th><th class="num">Saldo</th><th class="num">Acumulado</th></tr></thead><tbody>
+<h2>${esc(t('relatorios.pdfHEvo'))}</h2>
+<table><thead><tr><th>${esc(t('relatorios.pdfThMes'))}</th><th class="num">${esc(t('relatorios.pdfThReceitas'))}</th><th class="num">${esc(t('relatorios.pdfThDespesas'))}</th><th class="num">${esc(t('relatorios.pdfThSaldo'))}</th><th class="num">${esc(t('relatorios.pdfThAcum'))}</th></tr></thead><tbody>
 ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num">${esc(BRL.format(e.rec))}</td><td class="num">${esc(BRL.format(e.des))}</td><td class="num">${esc(BRL.format(e.saldo))}</td><td class="num">${esc(BRL.format(e.acum))}</td></tr>`))}
 </tbody></table>
-<p class="meta no-print" style="margin-top:24px">Use “Salvar como PDF” na janela de impressão. <button onclick="window.print()">Imprimir / salvar PDF</button></p>
+<p class="meta no-print" style="margin-top:24px">${esc(t('relatorios.pdfDica'))} <button onclick="window.print()">${esc(t('relatorios.pdfBtn'))}</button></p>
 <script>window.onload=()=>setTimeout(()=>window.print(),300)</script>
 </body></html>`;
     const w = window.open('', '_blank', 'width=900,height=700');
     if (!w) {
-      setErro('Navegador bloqueou a janela de impressão — libere pop-ups para exportar o PDF.');
+      setErro(t('relatorios.erroPopup'));
       return;
     }
     w.document.write(html);
@@ -324,7 +331,7 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
   return (
     <main className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center gap-2">
-        <TituloPagina Icon={IconeGrafico}>Relatórios</TituloPagina>
+        <TituloPagina Icon={IconeGrafico}>{t('relatorios.titulo')}</TituloPagina>
         <span className="flex-1" />
         <MesNav mes={mes} onChange={setMes} />
         <button
@@ -332,7 +339,7 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
           onClick={() => setModalFiltros(true)}
           className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-bold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-800"
         >
-          Filtros{filtrosAtivos > 0 ? ` (${filtrosAtivos})` : ''}
+          {filtrosAtivos > 0 ? t('relatorios.filtrosCount', { n: filtrosAtivos }) : t('relatorios.filtros')}
         </button>
         <button
           type="button"
@@ -340,40 +347,40 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
           disabled={carregando}
           className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
         >
-          Exportar PDF
+          {t('relatorios.exportarPdf')}
         </button>
       </div>
 
       <p className="text-sm text-slate-400 dark:text-slate-500">
         {periodoLabel}
-        {filtrosAtivos > 0 ? ` · ${filtrosAtivos} filtro${filtrosAtivos === 1 ? '' : 's'} além do período` : ' · sem filtros extras'}
+        {filtrosAtivos > 0 ? t('relatorios.comFiltros', { count: filtrosAtivos, n: filtrosAtivos }) : t('relatorios.semFiltros')}
       </p>
 
       <AlertaErro mensagem={erro} />
 
       {modalFiltros && (
-        <Modal titulo="Filtros do relatório" onFechar={() => setModalFiltros(false)} wide>
+        <Modal titulo={t('relatorios.modalTitulo')} onFechar={() => setModalFiltros(false)} wide>
           <div className="space-y-4">
 
         <div className="grid grid-cols-2 gap-3">
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-            Período
+            {t('relatorios.periodo')}
             <select value={preset} onChange={(e) => setPreset(e.target.value as Preset)} className={`mt-1 w-full ${inputCls}`}>
-              <option value="mes">Mês único</option>
-              <option value="6m">Últimos 6 meses</option>
-              <option value="12m">Últimos 12 meses</option>
-              <option value="ano">Ano fechado</option>
-              <option value="intervalo">Intervalo</option>
+              <option value="mes">{t('relatorios.presetMes')}</option>
+              <option value="6m">{t('relatorios.preset6m')}</option>
+              <option value="12m">{t('relatorios.preset12m')}</option>
+              <option value="ano">{t('relatorios.presetAno')}</option>
+              <option value="intervalo">{t('relatorios.presetIntervalo')}</option>
             </select>
           </label>
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-            Conta
+            {t('relatorios.conta')}
             <select
               value={contaFiltro}
               onChange={(e) => setContaFiltro(e.target.value === '' ? '' : Number(e.target.value))}
               className={`mt-1 w-full ${inputCls}`}
             >
-              <option value="">Todas</option>
+              <option value="">{t('relatorios.todas')}</option>
               {contas.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.icone ? `${c.icone} ` : ''}{c.nome}
@@ -385,17 +392,17 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
 
         {preset === 'ano' ? (
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-            Ano
+            {t('relatorios.ano')}
             <input value={ano} onChange={(e) => setAno(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder="2026" className={`mt-1 w-full ${inputCls}`} />
           </label>
         ) : preset === 'intervalo' ? (
           <div className="grid grid-cols-2 gap-3">
             <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-              Início
+              {t('relatorios.inicio')}
               <input type="month" value={ini} onChange={(e) => setIni(e.target.value)} className={`mt-1 w-full ${inputCls} [color-scheme:light] dark:[color-scheme:dark]`} />
             </label>
             <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-              Fim
+              {t('relatorios.fim')}
               <input type="month" value={fim} onChange={(e) => setFim(e.target.value)} className={`mt-1 w-full ${inputCls} [color-scheme:light] dark:[color-scheme:dark]`} />
             </label>
           </div>
@@ -403,24 +410,24 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
 
         <div className="grid grid-cols-8 gap-3">
           <label className="col-span-4 block text-sm font-medium text-slate-600 dark:text-slate-400">
-            Busca
-            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Origem, d…" className={`mt-1 w-full ${inputCls}`} />
+            {t('relatorios.busca')}
+            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('relatorios.buscaPlaceholder')} className={`mt-1 w-full ${inputCls}`} />
           </label>
           <label className="col-span-2 block text-sm font-medium text-slate-600 dark:text-slate-400">
-            Valor mín
+            {t('relatorios.min')}
             <input value={min} onChange={(e) => setMin(e.target.value.replace(/[^\d.,]/g, '').slice(0, 12))} inputMode="decimal" placeholder="0" className={`mt-1 w-full ${inputCls} tabular-nums`} />
           </label>
           <label className="col-span-2 block text-sm font-medium text-slate-600 dark:text-slate-400">
-            Valor máx
+            {t('relatorios.max')}
             <input value={max} onChange={(e) => setMax(e.target.value.replace(/[^\d.,]/g, '').slice(0, 12))} inputMode="decimal" placeholder="∞" className={`mt-1 w-full ${inputCls} tabular-nums`} />
           </label>
         </div>
 
         <div className="space-y-4">
           <div>
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Categorias de receita {catRec.length > 0 && `(${catRec.length})`}</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('relatorios.catRec')} {catRec.length > 0 && `(${catRec.length})`}</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {catsRec.length === 0 && <span className="text-xs text-slate-400">Nenhuma</span>}
+              {catsRec.length === 0 && <span className="text-xs text-slate-400">{t('relatorios.nenhuma')}</span>}
               {catsRec.map((c) => (
                 <button key={c} type="button" onClick={() => setCatRec(toggle(catRec, c))} aria-pressed={catRec.includes(c)} className={`${chip(catRec.includes(c))} shrink-0 whitespace-nowrap`}>
                   {c}
@@ -429,9 +436,9 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
             </div>
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Categorias de despesa {catDes.length > 0 && `(${catDes.length})`}</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('relatorios.catDes')} {catDes.length > 0 && `(${catDes.length})`}</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {catsDes.length === 0 && <span className="text-xs text-slate-400">Nenhuma</span>}
+              {catsDes.length === 0 && <span className="text-xs text-slate-400">{t('relatorios.nenhuma')}</span>}
               {catsDes.map((c) => (
                 <button key={c} type="button" onClick={() => setCatDes(toggle(catDes, c))} aria-pressed={catDes.includes(c)} className={`${chip(catDes.includes(c))} shrink-0 whitespace-nowrap`}>
                   {c}
@@ -440,16 +447,16 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
             </div>
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Formas de pagamento {formaSel.length > 0 && `(${formaSel.length})`}</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('relatorios.formasPag')} {formaSel.length > 0 && `(${formaSel.length})`}</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {formas.length === 0 && <span className="text-xs text-slate-400">Nenhuma</span>}
+              {formas.length === 0 && <span className="text-xs text-slate-400">{t('relatorios.nenhuma')}</span>}
               {formas.map((f) => (
                 <button key={f} type="button" onClick={() => setFormaSel(toggle(formaSel, f))} aria-pressed={formaSel.includes(f)} className={`${chip(formaSel.includes(f))} shrink-0 whitespace-nowrap`}>
                   {f}
                 </button>
               ))}
               <button type="button" onClick={() => setFormaSel(toggle(formaSel, ''))} aria-pressed={formaSel.includes('')} className={`${chip(formaSel.includes(''))} shrink-0 whitespace-nowrap`}>
-                Não informada
+                {t('relatorios.naoInformada')}
               </button>
             </div>
           </div>
@@ -461,7 +468,7 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
                   onClick={limpar}
                   className="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                  Limpar
+                  {t('relatorios.limpar')}
                 </button>
               )}
               <button
@@ -469,7 +476,7 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
                 onClick={() => setModalFiltros(false)}
                 className={`${filtrosAtivos > 0 ? '' : 'col-span-2'} rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700`}
               >
-                Aplicar filtros
+                {t('relatorios.aplicar')}
               </button>
             </div>
           </div>
@@ -478,33 +485,33 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Receitas · filtrado</p>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t('relatorios.recFiltrado')}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
             {carregando ? '…' : BRL.format(totalRec)}
           </p>
-          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{recFil.length} lançamentos · ticket {BRL.format(ticketRec)}</p>
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{t('relatorios.lancamentosTicket', { n: recFil.length, valor: BRL.format(ticketRec) })}</p>
         </div>
         <div className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Despesas · filtrado</p>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t('relatorios.desFiltrado')}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums text-rose-600 dark:text-rose-400">
             {carregando ? '…' : BRL.format(totalDes)}
           </p>
-          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{desFil.length} lançamentos · ticket {BRL.format(ticketDes)}</p>
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{t('relatorios.lancamentosTicket', { n: desFil.length, valor: BRL.format(ticketDes) })}</p>
         </div>
         <div className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Saldo · filtrado</p>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t('relatorios.saldoFiltrado')}</p>
           <p className={`mt-1 text-2xl font-bold tabular-nums ${totalRec - totalDes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
             {carregando ? '…' : BRL.format(totalRec - totalDes)}
           </p>
-          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{recFil.length + desFil.length} lançamentos no período</p>
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{t('relatorios.lancamentosPeriodo', { n: recFil.length + desFil.length })}</p>
         </div>
       </div>
 
       <div className="grid items-stretch gap-6 lg:grid-cols-2">
-        <section aria-label="Despesas por categoria" className="flex h-full flex-col rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
-          <h2 className="text-base font-bold">Despesas por categoria</h2>
+        <section aria-label={t('relatorios.desPorCat')} className="flex h-full flex-col rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+          <h2 className="text-base font-bold">{t('relatorios.desPorCat')}</h2>
           {porCatDes.length === 0 ? (
-            <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">Sem despesas no filtro.</p>
+            <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">{t('relatorios.semDesFiltro')}</p>
           ) : (
             <ul className="mt-3 space-y-3">
               {porCatDes.map(([nome, total]) => (
@@ -518,10 +525,10 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
           )}
         </section>
 
-        <section aria-label="Receitas por categoria" className="flex h-full flex-col rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
-          <h2 className="text-base font-bold">Receitas por categoria</h2>
+        <section aria-label={t('relatorios.recPorCat')} className="flex h-full flex-col rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+          <h2 className="text-base font-bold">{t('relatorios.recPorCat')}</h2>
           {porCatRec.length === 0 ? (
-            <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">Sem receitas no filtro.</p>
+            <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">{t('relatorios.semRecFiltro')}</p>
           ) : (
             <ul className="mt-3 space-y-3">
               {porCatRec.map(([nome, total]) => (
@@ -537,10 +544,10 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
       </div>
 
       <div className="grid items-stretch gap-6 lg:grid-cols-2">
-        <section aria-label="Despesas por forma de pagamento" className="flex h-full flex-col rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
-          <h2 className="text-base font-bold">Por cartão / pagamento</h2>
+        <section aria-label={t('relatorios.porCartao')} className="flex h-full flex-col rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+          <h2 className="text-base font-bold">{t('relatorios.porCartao')}</h2>
           {porForma.length === 0 ? (
-            <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">Sem despesas no filtro.</p>
+            <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">{t('relatorios.semDesFiltro')}</p>
           ) : (
             <ul className="mt-3 space-y-3">
               {porForma.map(([nome, { total, qtd }]) => (
@@ -555,14 +562,14 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
           )}
         </section>
 
-        <section aria-label="Maiores lançamentos" className="flex h-full flex-col rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
-          <h2 className="text-base font-bold">Maiores no filtro (top 5)</h2>
+        <section aria-label={t('relatorios.maiores')} className="flex h-full flex-col rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+          <h2 className="text-base font-bold">{t('relatorios.maiores')}</h2>
           {topDes.length === 0 && topRec.length === 0 ? (
-            <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">Sem lançamentos no filtro.</p>
+            <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">{t('relatorios.semLancFiltro')}</p>
           ) : (
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-rose-500">Despesas</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-rose-500">{t('relatorios.despesasLabel')}</p>
                 <ul className="mt-2 space-y-2">
                   {topDes.map((d) => (
                     <li key={d.id} className="text-sm">
@@ -574,7 +581,7 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
                 </ul>
               </div>
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-emerald-500">Receitas</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-emerald-500">{t('relatorios.receitasLabel')}</p>
                 <ul className="mt-2 space-y-2">
                   {topRec.map((r) => (
                     <li key={r.id} className="text-sm">
@@ -590,19 +597,19 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
         </section>
       </div>
 
-      <section aria-label="Saldo por conta" className="overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
-        <h2 className="px-5 pt-5 text-base font-bold">Por conta · filtrado</h2>
+      <section aria-label={t('relatorios.porConta')} className="overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+        <h2 className="px-5 pt-5 text-base font-bold">{t('relatorios.porConta')}</h2>
         <div className="overflow-x-auto p-5 pt-3">
           {porConta.length === 0 ? (
-            <p className="rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">Sem movimentos no filtro.</p>
+            <p className="rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">{t('relatorios.semMovFiltro')}</p>
           ) : (
             <table className="w-full min-w-[480px] text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                  <th className="pb-2 font-semibold">Conta</th>
-                  <th className="pb-2 text-right font-semibold">Receitas</th>
-                  <th className="pb-2 text-right font-semibold">Despesas</th>
-                  <th className="pb-2 text-right font-semibold">Saldo</th>
+                  <th className="pb-2 font-semibold">{t('relatorios.thConta')}</th>
+                  <th className="pb-2 text-right font-semibold">{t('relatorios.thReceitas')}</th>
+                  <th className="pb-2 text-right font-semibold">{t('relatorios.thDespesas')}</th>
+                  <th className="pb-2 text-right font-semibold">{t('relatorios.thSaldo')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -620,17 +627,17 @@ ${linhas(evolucao.map((e) => `<tr><td>${esc(mesLabel(e.mes))}</td><td class="num
         </div>
       </section>
 
-      <section aria-label="Evolução no período" className="overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
-        <h2 className="px-5 pt-5 text-base font-bold">Evolução · {periodoLabel}</h2>
+      <section aria-label={t('relatorios.evolucao', { periodo: periodoLabel })} className="overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+        <h2 className="px-5 pt-5 text-base font-bold">{t('relatorios.evolucao', { periodo: periodoLabel })}</h2>
         <div className="overflow-x-auto p-5 pt-3">
           <table className="w-full min-w-[560px] text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                <th className="pb-2 font-semibold">Mês</th>
-                <th className="pb-2 text-right font-semibold">Receitas</th>
-                <th className="pb-2 text-right font-semibold">Despesas</th>
-                <th className="pb-2 text-right font-semibold">Saldo</th>
-                <th className="pb-2 text-right font-semibold">Acumulado</th>
+                <th className="pb-2 font-semibold">{t('relatorios.thMes')}</th>
+                <th className="pb-2 text-right font-semibold">{t('relatorios.thReceitas')}</th>
+                <th className="pb-2 text-right font-semibold">{t('relatorios.thDespesas')}</th>
+                <th className="pb-2 text-right font-semibold">{t('relatorios.thSaldo')}</th>
+                <th className="pb-2 text-right font-semibold">{t('relatorios.thAcumulado')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">

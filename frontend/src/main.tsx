@@ -1,7 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './auth';
+import './i18n';
 import { ProvedorAparencia } from './tema';
 import Layout from './Layout';
 import Auditoria from './pages/Auditoria';
@@ -21,10 +23,11 @@ import './index.css';
 
 function RotaProtegida({ children }: { children: React.ReactNode }) {
   const { usuario, carregando } = useAuth();
+  const { t } = useTranslation();
   if (carregando) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-900">
-        <p className="text-sm text-slate-400">Carregando…</p>
+        <p className="text-sm text-slate-400">{t('comum.carregando')}</p>
       </main>
     );
   }

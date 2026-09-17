@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api';
 import { parseOfx, type OfxItem } from '../ofx';
 import {
@@ -20,6 +21,7 @@ interface Linha {
 }
 
 export default function ImportarOfx() {
+  const { t } = useTranslation();
   const { nomesPorTipo, formas, contas, contaPrincipal } = useCatalogo();
   const [arquivoNome, setArquivoNome] = useState('');
   const [contaId, setContaId] = useState<number | ''>('');
@@ -66,7 +68,7 @@ export default function ImportarOfx() {
         })),
       );
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao ler arquivo');
+      setErro(e instanceof Error ? e.message : t('ofx.erroLeitura'));
       setLinhas([]);
       setArquivoNome('');
     }
@@ -95,7 +97,7 @@ export default function ImportarOfx() {
 
   async function confirmar() {
     if (contaId === '') {
-      setErro('Escolha a conta de destino');
+      setErro(t('ofx.erroConta'));
       return;
     }
     const itens = linhas
@@ -109,7 +111,7 @@ export default function ImportarOfx() {
         descricao: l.item.descricao,
       }));
     if (itens.length === 0) {
-      setErro('Marque ao menos um lançamento para importar');
+      setErro(t('ofx.erroNenhum'));
       return;
     }
     setTrabalhando(true);
@@ -130,14 +132,14 @@ export default function ImportarOfx() {
         },
       );
       setOk(
-        `Importados ${r.receitas} receita(s) e ${r.despesas} despesa(s)` +
-          (r.ignorados > 0 ? ` — ${r.ignorados} duplicado(s) ignorado(s).` : '.'),
+        t('ofx.okImportados', { rec: r.receitas, des: r.despesas }) +
+          (r.ignorados > 0 ? t('ofx.okDuplicados', { n: r.ignorados }) : '.'),
       );
       setLinhas([]);
       setArquivoNome('');
       setSincronizadoEm(new Date());
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao importar');
+      setErro(e instanceof Error ? e.message : t('ofx.erroImportar'));
     } finally {
       setTrabalhando(false);
     }
@@ -152,12 +154,12 @@ export default function ImportarOfx() {
   return (
     <main className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <TituloPagina Icon={IconeExtrato}>Importar OFX</TituloPagina>
+        <TituloPagina Icon={IconeExtrato}>{t('ofx.titulo')}</TituloPagina>
         <Link
           to="/lancamentos"
           className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-bold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-800"
         >
-          ← Voltar a Lançamentos
+          {t('ofx.voltar')}
         </Link>
       </div>
 
@@ -169,23 +171,22 @@ export default function ImportarOfx() {
         >
           {ok}{' '}
           <Link to="/lancamentos" className="font-bold hover:underline">
-            Ver lançamentos
+            {t('ofx.verLancamentos')}
           </Link>
         </p>
       )}
 
-      <section aria-label="Arquivo e destino" className={card}>
+      <section aria-label={t('ofx.passo1')} className={card}>
         <h2 className="text-base font-bold">
           <span className="mr-2 rounded-full bg-slate-900 px-2 py-0.5 text-xs font-bold text-white">1</span>
-          Arquivo e destino
+          {t('ofx.passo1')}
         </h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Exporte o extrato no app do banco (formato OFX) e escolha para onde vão os lançamentos.
-          O tipo vem do sinal do valor; a categoria padrão pode ser ajustada por linha na prévia.
+          {t('ofx.passo1Ajuda')}
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 sm:col-span-2">
-            Arquivo .ofx
+            {t('ofx.arquivo')}
             <input
               type="file"
               accept=".ofx,.ofc"
@@ -194,27 +195,27 @@ export default function ImportarOfx() {
             />
           </label>
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-            Conta de destino
+            {t('ofx.contaDestino')}
             <select value={contaId} onChange={(e) => setContaId(e.target.value === '' ? '' : Number(e.target.value))} className={`${select} mt-1`}>
-              <option value="">Escolher…</option>
+              <option value="">{t('ofx.escolher')}</option>
               {contas.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.icone ? `${c.icone} ` : ''}{c.nome}{c.principal ? ' (principal)' : ''}
+                  {c.icone ? `${c.icone} ` : ''}{c.nome}{c.principal ? t('ofx.principalSufixo') : ''}
                 </option>
               ))}
             </select>
           </label>
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-            Forma de pagamento
+            {t('form.formaPagamento')}
             <select value={forma} onChange={(e) => setForma(e.target.value)} className={`${select} mt-1`}>
-              <option value="">Não informar</option>
+              <option value="">{t('ofx.naoInformar')}</option>
               {formas.map((f) => (
                 <option key={f} value={f}>{f}</option>
               ))}
             </select>
           </label>
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-            Categoria padrão · receitas
+            {t('ofx.catPadraoReceitas')}
             <select value={catRec} onChange={(e) => setCatRec(e.target.value)} className={`${select} mt-1`}>
               {catsRec.map((c) => (
                 <option key={c} value={c}>{c}</option>
@@ -222,7 +223,7 @@ export default function ImportarOfx() {
             </select>
           </label>
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-            Categoria padrão · despesas
+            {t('ofx.catPadraoDespesas')}
             <select value={catDes} onChange={(e) => setCatDes(e.target.value)} className={`${select} mt-1`}>
               {catsDes.map((c) => (
                 <option key={c} value={c}>{c}</option>
@@ -233,13 +234,13 @@ export default function ImportarOfx() {
       </section>
 
       {linhas.length > 0 && (
-        <section aria-label="Prévia da importação" className={card}>
+        <section aria-label={t('ofx.previa', { arquivo: arquivoNome })} className={card}>
           <h2 className="text-base font-bold">
             <span className="mr-2 rounded-full bg-slate-900 px-2 py-0.5 text-xs font-bold text-white">2</span>
-            Prévia · {arquivoNome}
+            {t('ofx.previa', { arquivo: arquivoNome })}
           </h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {resumo.total} selecionado(s) —{' '}
+            {t('ofx.resumoSelecionados', { total: resumo.total })}{' '}
             <span className="font-bold text-emerald-600 dark:text-emerald-400">
               {resumo.receitas.length} receita(s) {BRL.format(resumo.valorRec)}
             </span>{' '}
@@ -247,7 +248,7 @@ export default function ImportarOfx() {
             <span className="font-bold text-rose-600 dark:text-rose-400">
               {resumo.despesas.length} despesa(s) {BRL.format(resumo.valorDes)}
             </span>
-            . Clique no tipo para trocar; duplicados de importação anterior são ignorados sozinhos.
+            . {t('ofx.previaAjuda')}
           </p>
           <div className="mt-3 overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm">
@@ -260,15 +261,15 @@ export default function ImportarOfx() {
                       onChange={(e) =>
                         setLinhas((ls) => ls.map((l) => ({ ...l, incluir: e.target.checked })))
                       }
-                      aria-label="Selecionar todos"
+                      aria-label={t('ofx.selecionarTodos')}
                       className="h-4 w-4 accent-emerald-600"
                     />
                   </th>
-                  <th className="pb-2 pr-4 font-semibold">Data</th>
-                  <th className="pb-2 pr-4 font-semibold">Descrição</th>
-                  <th className="pb-2 pr-4 font-semibold">Tipo</th>
-                  <th className="pb-2 pr-4 font-semibold">Categoria</th>
-                  <th className="pb-2 text-right font-semibold">Valor</th>
+                  <th className="pb-2 pr-4 font-semibold">{t('ofx.colData')}</th>
+                  <th className="pb-2 pr-4 font-semibold">{t('ofx.colDescricao')}</th>
+                  <th className="pb-2 pr-4 font-semibold">{t('ofx.colTipo')}</th>
+                  <th className="pb-2 pr-4 font-semibold">{t('ofx.colCategoria')}</th>
+                  <th className="pb-2 text-right font-semibold">{t('ofx.colValor')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -281,7 +282,7 @@ export default function ImportarOfx() {
                         onChange={(e) =>
                           setLinhas((ls) => ls.map((x, j) => (j === i ? { ...x, incluir: e.target.checked } : x)))
                         }
-                        aria-label={`Incluir ${l.item.descricao}`}
+                        aria-label={t('ofx.incluirAria', { descricao: l.item.descricao })}
                         className="h-4 w-4 accent-emerald-600"
                       />
                     </td>
@@ -293,14 +294,14 @@ export default function ImportarOfx() {
                       <button
                         type="button"
                         onClick={() => alternarTipo(i)}
-                        title="Clique para trocar o tipo"
+                        title={t('ofx.trocarTipo')}
                         className={`rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset transition ${
                           l.tipo === 'receita'
                             ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 ring-emerald-200 dark:ring-emerald-900'
                             : 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 ring-rose-200 dark:ring-rose-900'
                         }`}
                       >
-                        {l.tipo === 'receita' ? '+ Receita' : '− Despesa'}
+                        {l.tipo === 'receita' ? t('ofx.receitaBadge') : t('ofx.despesaBadge')}
                       </button>
                     </td>
                     <td className="py-2 pr-4">
@@ -309,7 +310,7 @@ export default function ImportarOfx() {
                         onChange={(e) =>
                           setLinhas((ls) => ls.map((x, j) => (j === i ? { ...x, categoria: e.target.value } : x)))
                         }
-                        aria-label={`Categoria de ${l.item.descricao}`}
+                        aria-label={t('ofx.categoriaDeAria', { descricao: l.item.descricao })}
                         className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-xs outline-none"
                       >
                         {(l.tipo === 'receita' ? catsRec : catsDes).map((c) => (
@@ -331,7 +332,7 @@ export default function ImportarOfx() {
             disabled={trabalhando || resumo.total === 0}
             className="mt-4 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-700 disabled:cursor-wait disabled:opacity-60"
           >
-            {trabalhando ? 'Importando…' : `Confirmar importação (${resumo.total})`}
+            {trabalhando ? t('ofx.importando') : t('ofx.confirmar', { total: resumo.total })}
           </button>
         </section>
       )}

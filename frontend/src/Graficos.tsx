@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 import { BRL, corSwatch } from './ui';
 
 export interface PontoMensal {
@@ -55,6 +56,7 @@ function TooltipGrafico({ active, payload, label }: { active?: boolean; payload?
 }
 
 export function GraficoBarrasMensal({ dados }: { dados: PontoMensal[] }) {
+  const { t } = useTranslation();
   return (
     <div className="h-[240px] w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -69,8 +71,8 @@ export function GraficoBarrasMensal({ dados }: { dados: PontoMensal[] }) {
           />
           <YAxis hide domain={[0, 'auto']} />
           <Tooltip content={<TooltipGrafico />} cursor={{ fill: 'rgba(148,163,184,0.12)' }} />
-          <Bar name="Receitas" dataKey="receitas" fill={VERDE} radius={[6, 6, 2, 2]} maxBarSize={26} animationDuration={600} />
-          <Bar name="Despesas" dataKey="despesas" fill={ROSA} radius={[6, 6, 2, 2]} maxBarSize={26} animationDuration={600} />
+          <Bar name={t('graficos.receitas')} dataKey="receitas" fill={VERDE} radius={[6, 6, 2, 2]} maxBarSize={26} animationDuration={600} />
+          <Bar name={t('graficos.despesas')} dataKey="despesas" fill={ROSA} radius={[6, 6, 2, 2]} maxBarSize={26} animationDuration={600} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -89,13 +91,14 @@ function TooltipDonut({ active, payload }: { active?: boolean; payload?: { paylo
 }
 
 export function GraficoDonut({ fatias }: { fatias: FatiaCategoria[] }) {
+  const { t } = useTranslation();
   const total = fatias.reduce((s, f) => s + f.total, 0);
 
   if (total <= 0) {
     return (
       <div className="flex h-[240px] items-center justify-center">
         <p className="w-full rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
-          Sem despesas neste mês.
+          {t('graficos.semDespesas')}
         </p>
       </div>
     );
@@ -104,7 +107,7 @@ export function GraficoDonut({ fatias }: { fatias: FatiaCategoria[] }) {
   const visiveis = fatias.slice(0, 7);
   const restoTotal = fatias.slice(7).reduce((s, f) => s + f.total, 0);
   const todas: FatiaCategoria[] =
-    restoTotal > 0 ? [...visiveis, { nome: 'Outras', cor: 'slate', total: restoTotal }] : visiveis;
+    restoTotal > 0 ? [...visiveis, { nome: t('graficos.outras'), cor: 'slate', total: restoTotal }] : visiveis;
 
   return (
     <div className="flex h-[240px] flex-col items-center gap-2 sm:flex-row sm:gap-4">
@@ -130,7 +133,7 @@ export function GraficoDonut({ fatias }: { fatias: FatiaCategoria[] }) {
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-base font-bold tabular-nums sm:text-lg">{BRL.format(total)}</span>
-          <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">total mês</span>
+          <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">{t('graficos.totalMes')}</span>
         </div>
       </div>
       <ul className="w-full min-w-0 flex-1 space-y-2 overflow-y-auto pr-1">

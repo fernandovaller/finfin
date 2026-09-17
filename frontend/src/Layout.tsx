@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from './auth';
 import {
   Avatar,
@@ -11,33 +12,33 @@ import {
   IconeTag,
 } from './ui';
 
-const GRUPOS = [
-  {
-    rotulo: 'Principal',
-    itens: [
-      { to: '/', label: 'Home', Icon: IconeCasa },
-      { to: '/lancamentos', label: 'Lançamentos', Icon: IconeExtrato },
-      { to: '/relatorios', label: 'Relatórios', Icon: IconeGrafico },
-    ],
-  },
-  {
-    rotulo: 'Cadastros',
-    itens: [
-      { to: '/categorias', label: 'Categorias', Icon: IconeTag },
-      { to: '/contas', label: 'Contas', Icon: IconeCarteira },
-      { to: '/formas-pagamento', label: 'Formas de pagamento', Icon: IconeCarteira },
-    ],
-  },
-  {
-    rotulo: 'Sistema',
-    itens: [
-      { to: '/configuracoes', label: 'Configurações', Icon: IconeEngrenagem },
-      { to: '/auditoria', label: 'Auditoria', Icon: IconeExtrato },
-    ],
-  },
-];
-
 function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
+  const { t } = useTranslation();
+  const GRUPOS = [
+    {
+      rotulo: t('layout.grupos.principal'),
+      itens: [
+        { to: '/', label: t('layout.nav.home'), Icon: IconeCasa },
+        { to: '/lancamentos', label: t('layout.nav.lancamentos'), Icon: IconeExtrato },
+        { to: '/relatorios', label: t('layout.nav.relatorios'), Icon: IconeGrafico },
+      ],
+    },
+    {
+      rotulo: t('layout.grupos.cadastros'),
+      itens: [
+        { to: '/categorias', label: t('layout.nav.categorias'), Icon: IconeTag },
+        { to: '/contas', label: t('layout.nav.contas'), Icon: IconeCarteira },
+        { to: '/formas-pagamento', label: t('layout.nav.formasPagamento'), Icon: IconeCarteira },
+      ],
+    },
+    {
+      rotulo: t('layout.grupos.sistema'),
+      itens: [
+        { to: '/configuracoes', label: t('layout.nav.configuracoes'), Icon: IconeEngrenagem },
+        { to: '/auditoria', label: t('layout.nav.auditoria'), Icon: IconeExtrato },
+      ],
+    },
+  ];
   return (
     <nav className="space-y-5 px-3">
       {GRUPOS.map((grupo, i) => (
@@ -81,6 +82,7 @@ function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
 export default function Layout() {
   const [aberto, setAberto] = useState(false);
   const { usuario, sair } = useAuth();
+  const { t } = useTranslation();
   const navegar = useNavigate();
 
   async function onSair() {
@@ -93,11 +95,11 @@ export default function Layout() {
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col bg-slate-900 lg:flex">
         <div className="flex items-center gap-3 px-5 pb-6 pt-6">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white p-1 shadow-lg shadow-slate-950/40">
-            <img src="/favicon-96x96.png" alt="Logotipo FinFin" className="h-full w-full object-contain" />
+            <img src="/favicon-96x96.png" alt={t('layout.logoAlt')} className="h-full w-full object-contain" />
           </div>
           <div>
             <p className="text-lg font-bold tracking-tight text-white">FinFin</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">Financeiro pessoal</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">{t('layout.subtitulo')}</p>
           </div>
         </div>
         <Navegacao />
@@ -115,11 +117,11 @@ export default function Layout() {
                 onClick={onSair}
                 className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-slate-400 dark:text-slate-500 transition hover:bg-slate-700 hover:text-white"
               >
-                Sair
+                {t('comum.sair')}
               </button>
             </div>
           )}
-          <p className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">FinFin · controle financeiro</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{t('layout.rodape')}</p>
         </div>
       </aside>
 
@@ -130,14 +132,14 @@ export default function Layout() {
             <div className="flex items-center justify-between px-5 pb-6 pt-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white p-1">
-                  <img src="/favicon-96x96.png" alt="Logotipo FinFin" className="h-full w-full object-contain" />
+                  <img src="/favicon-96x96.png" alt={t('layout.logoAlt')} className="h-full w-full object-contain" />
                 </div>
                 <p className="text-lg font-bold tracking-tight text-white">FinFin</p>
               </div>
               <button
                 type="button"
                 onClick={() => setAberto(false)}
-                aria-label="Fechar menu"
+                aria-label={t('layout.fecharMenu')}
                 className="rounded-lg px-2 py-1 text-xl leading-none text-slate-400 dark:text-slate-500 hover:bg-slate-800 hover:text-white"
               >
                 ×
@@ -158,7 +160,7 @@ export default function Layout() {
                     onClick={onSair}
                     className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-slate-400 dark:text-slate-500 transition hover:bg-slate-700 hover:text-white"
                   >
-                    Sair
+                    {t('comum.sair')}
                   </button>
                 </div>
               )}
@@ -171,7 +173,7 @@ export default function Layout() {
         <button
           type="button"
           onClick={() => setAberto(true)}
-          aria-label="Abrir menu"
+          aria-label={t('layout.abrirMenu')}
           className="rounded-lg p-2 transition hover:bg-slate-800"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6">

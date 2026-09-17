@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import ResumoMes from '../ResumoMes';
 import { GraficoBarrasMensal, GraficoDonut } from '../Graficos';
 import { api, type Despesa, type Receita, type Resumo } from '../api';
+import { localeIntl } from '../i18n';
 import {
   AlertaErro,
   BRL,
@@ -21,11 +23,12 @@ import { useCatalogo } from './useCatalogo';
 
 function rotuloCurto(mes: string): string {
   const [ano, m] = mes.split('-').map(Number);
-  const nome = new Date(ano, m - 1, 1).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+  const nome = new Date(ano, m - 1, 1).toLocaleDateString(localeIntl(), { month: 'short' }).replace('.', '');
   return `${nome}/${String(ano).slice(2)}`;
 }
 
 export default function Home() {
+  const { t } = useTranslation();
   const [mes, setMes] = useState(mesAtual);
   const [receitas, setReceitas] = useState<Receita[]>([]);
   const [despesas, setDespesas] = useState<Despesa[]>([]);
@@ -53,7 +56,7 @@ export default function Home() {
         setErro('');
         setSincronizadoEm(new Date());
       })
-      .catch((e) => ativo && setErro(e instanceof Error ? e.message : 'Falha ao carregar dados'))
+      .catch((e) => ativo && setErro(e instanceof Error ? e.message : t('comum.falhaCarregar')))
       .finally(() => ativo && setCarregando(false));
     return () => {
       ativo = false;
@@ -93,7 +96,7 @@ export default function Home() {
   const saldosContas = useMemo(() => {
     const visiveis = (contaFiltro === '' ? contas : contas.filter((c) => c.id === contaFiltro)).slice().sort((a, b) => {
       if (a.principal !== b.principal) return a.principal ? -1 : 1;
-      return a.nome.localeCompare(b.nome, 'pt-BR');
+      return a.nome.localeCompare(b.nome, localeIntl());
     });
     return visiveis.map((c) => {
       const recTotal = receitas.filter((r) => r.contaId === c.id).reduce((s, r) => s + r.valor, 0);
@@ -107,15 +110,15 @@ export default function Home() {
   return (
     <main className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <TituloPagina Icon={IconeCasa}>Home</TituloPagina>
+        <TituloPagina Icon={IconeCasa}>{t('home.titulo')}</TituloPagina>
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={contaFiltro}
             onChange={(e) => setContaFiltro(e.target.value === '' ? '' : Number(e.target.value))}
             className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm outline-none"
-            aria-label="Filtrar por conta"
+            aria-label={t('comum.filtrarConta')}
           >
-            <option value="">Todas as contas</option>
+            <option value="">{t('comum.todasContas')}</option>
             {contas.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.icone ? `${c.icone} ` : ''}{c.nome}
@@ -137,26 +140,26 @@ export default function Home() {
       />
 
       <section
-        aria-label="Contas"
+        aria-label={t('home.contas')}
         className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"
       >
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-base font-bold">
             <IconeCarteira className="h-5 w-5 text-slate-400" />
-            Contas
+            {t('home.contas')}
             <span className="text-sm font-medium text-slate-400 dark:text-slate-500">· {mesLabel(mes)}</span>
           </h2>
           <Link to="/contas" className="text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:underline">
-            Gerenciar
+            {t('comum.gerenciar')}
           </Link>
         </div>
         {carregando ? (
-          <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">Carregando…</p>
+          <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">{t('comum.carregando')}</p>
         ) : saldosContas.length === 0 ? (
           <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
-            Nenhuma conta cadastrada.{' '}
+            {t('home.nenhumaConta')}{' '}
             <Link to="/contas" className="font-semibold text-emerald-700 dark:text-emerald-300 hover:underline">
-              Criar a primeira
+              {t('home.criarPrimeira')}
             </Link>
           </p>
         ) : (
@@ -171,14 +174,14 @@ export default function Home() {
                   <span className="truncate">{conta.nome}</span>
                   {conta.principal && (
                     <span className="shrink-0 rounded-full bg-amber-100 dark:bg-amber-950 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
-                      Principal
+                      {t('home.principal')}
                     </span>
                   )}
                 </p>
                 <p className={`mt-1 text-xl font-bold tabular-nums ${saldoAtual >= 0 ? 'text-slate-800 dark:text-slate-100' : 'text-rose-600 dark:text-rose-400'}`}>
                   {BRL.format(saldoAtual)}
                 </p>
-                <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">saldo atual</p>
+                <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">{t('home.saldoAtual')}</p>
                 <div className="mt-2 flex items-center justify-between border-t border-slate-200/70 dark:border-slate-700/60 pt-2 text-xs">
                   <span className="font-medium text-slate-400 dark:text-slate-500">
                     +{BRL.format(recM)} · −{BRL.format(desM)}
@@ -195,25 +198,25 @@ export default function Home() {
 
       <div className="grid items-stretch gap-6 lg:grid-cols-2">
         <section
-          aria-label="Evolução dos últimos 6 meses"
+          aria-label={t('home.receitasXdespesas')}
           className="flex h-full flex-col rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"
         >
-          <h2 className="text-base font-bold">Receitas x Despesas</h2>
-          <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Últimos 6 meses</p>
+          <h2 className="text-base font-bold">{t('home.receitasXdespesas')}</h2>
+          <p className="text-xs font-medium text-slate-400 dark:text-slate-500">{t('home.ultimos6m')}</p>
           <div className="mt-3 flex-1">
             {carregando ? (
-              <p className="flex h-[240px] items-center text-sm text-slate-400 dark:text-slate-500">Carregando…</p>
+              <p className="flex h-[240px] items-center text-sm text-slate-400 dark:text-slate-500">{t('comum.carregando')}</p>
             ) : (
               <>
                 <GraficoBarrasMensal dados={evolucao} />
                 <div className="mt-1 flex items-center gap-4 text-xs font-medium text-slate-500 dark:text-slate-400">
                   <span>
                     <span className="mr-1 inline-block h-2 w-2 rounded-full bg-emerald-500" />
-                    Receitas
+                    {t('graficos.receitas')}
                   </span>
                   <span>
                     <span className="mr-1 inline-block h-2 w-2 rounded-full bg-rose-500" />
-                    Despesas
+                    {t('graficos.despesas')}
                   </span>
                 </div>
               </>
@@ -222,16 +225,16 @@ export default function Home() {
         </section>
 
         <section
-          aria-label="Despesas por categoria"
+          aria-label={t('home.despesasPorCategoria')}
           className="flex h-full flex-col rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"
         >
           <h2 className="text-base font-bold">
-            Despesas por categoria <span className="ml-1 text-sm font-medium text-slate-400 dark:text-slate-500">· {mesLabel(mes)}</span>
+            {t('home.despesasPorCategoria')} <span className="ml-1 text-sm font-medium text-slate-400 dark:text-slate-500">· {mesLabel(mes)}</span>
           </h2>
-          <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Por categoria no mês</p>
+          <p className="text-xs font-medium text-slate-400 dark:text-slate-500">{t('home.porCategoriaMes')}</p>
           <div className="mt-3 flex-1">
             {carregando ? (
-              <p className="flex h-[240px] items-center text-sm text-slate-400 dark:text-slate-500">Carregando…</p>
+              <p className="flex h-[240px] items-center text-sm text-slate-400 dark:text-slate-500">{t('comum.carregando')}</p>
             ) : (
               <GraficoDonut fatias={fatias} />
             )}
@@ -240,27 +243,27 @@ export default function Home() {
       </div>
 
       <section
-        aria-label="Atividade recente"
+        aria-label={t('home.atividadeRecente')}
         className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"
       >
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold">
-            Atividade recente <span className="ml-1 text-sm font-medium text-slate-400 dark:text-slate-500">· {mesLabel(mes)}</span>
+            {t('home.atividadeRecente')} <span className="ml-1 text-sm font-medium text-slate-400 dark:text-slate-500">· {mesLabel(mes)}</span>
           </h2>
           <Link
             to="/lancamentos"
             className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-slate-700"
           >
-            + Novo lançamento
+            {t('home.novoLancamento')}
           </Link>
         </div>
         {carregando ? (
-          <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">Carregando…</p>
+          <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">{t('comum.carregando')}</p>
         ) : recentes.length === 0 ? (
           <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
-            Nenhum movimento neste mês.{' '}
+            {t('home.nenhumMovimento')}{' '}
             <Link to="/lancamentos" className="font-semibold text-emerald-700 dark:text-emerald-300 hover:underline">
-              Adicionar o primeiro
+              {t('home.adicionarPrimeiro')}
             </Link>
           </p>
         ) : (

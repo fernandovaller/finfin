@@ -1,3 +1,5 @@
+import i18n from './i18n';
+
 export interface Receita {
   id: number;
   data: string;
@@ -150,11 +152,11 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
       // Access expirado/nulo (ex.: F5 limpou a memória): renova e repete 1 vez.
       const novo = await refreshAccess();
       if (novo) return tenta(1);
-      throw new Error('Sessão expirada — faça login novamente');
+      throw new Error(i18n.t('comum.sessaoExpirada'));
     }
     if (res.status === 401 && accessToken && !semRefresh) {
       clearToken();
-      throw new Error('Sessão expirada — faça login novamente');
+      throw new Error(i18n.t('comum.sessaoExpirada'));
     }
     if (!res.ok) throw new Error(await lerErro(res));
     if (res.status === 204) return undefined as T;

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api';
+import { salvarIdioma, type Idioma } from '../i18n';
 import { useAparencia, type Largura, type Tema } from '../tema';
 import { AlertaErro, IconeEngrenagem, Modal, StatusSync, TituloPagina } from '../ui';
 
@@ -28,13 +30,6 @@ interface StatusDemo {
 
 type Aba = 'geral' | 'backup' | 'email' | 'perigo';
 
-const ABAS: Array<{ valor: Aba; rotulo: string }> = [
-  { valor: 'geral', rotulo: 'Geral' },
-  { valor: 'backup', rotulo: 'Backup' },
-  { valor: 'email', rotulo: 'E-mail' },
-  { valor: 'perigo', rotulo: 'Zona de perigo' },
-];
-
 function baixar(filename: string, conteudo: string, tipo: string) {
   const blob = new Blob([conteudo], { type: `${tipo};charset=utf-8` });
   const url = URL.createObjectURL(blob);
@@ -50,6 +45,7 @@ function baixar(filename: string, conteudo: string, tipo: string) {
 type Perigo = { path: string; titulo: string; detalhe: string } | null;
 
 export default function Configuracoes() {
+  const { t, i18n } = useTranslation();
   const [contagem, setContagem] = useState<Contagem | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [trabalhando, setTrabalhando] = useState(false);
@@ -79,7 +75,7 @@ export default function Configuracoes() {
       setDemo(demoAtual);
       setSincronizadoEm(new Date());
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao carregar dados');
+      setErro(e instanceof Error ? e.message : t('comum.falhaCarregar'));
     } finally {
       setCarregando(false);
     }
@@ -101,9 +97,9 @@ export default function Configuracoes() {
         JSON.stringify(dados, null, 2),
         'application/json',
       );
-      setOk('Backup JSON exportado.');
+      setOk(t('config.exportar.okJson'));
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao exportar');
+      setErro(e instanceof Error ? e.message : t('config.exportar.erro'));
     } finally {
       setTrabalhando(false);
     }
@@ -118,9 +114,9 @@ export default function Configuracoes() {
         `/api/exportar/csv?tipo=${tipo}`,
       );
       baixar(filename, `﻿${csv}`, 'text/csv');
-      setOk(`CSV de ${tipo} exportado.`);
+      setOk(t('config.exportar.okCsv', { tipo }));
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao exportar');
+      setErro(e instanceof Error ? e.message : t('config.exportar.erro'));
     } finally {
       setTrabalhando(false);
     }
@@ -136,12 +132,12 @@ export default function Configuracoes() {
       });
       setOk(
         r.categorias + r.formas === 0
-          ? 'Catálogo já estava completo — nada a restaurar.'
-          : `Restaurados ${r.categorias} categoria(s) e ${r.formas} forma(s).`,
+          ? t('config.catalogo.okNada')
+          : t('config.catalogo.ok', { cats: r.categorias, formas: r.formas }),
       );
       await recarregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao restaurar');
+      setErro(e instanceof Error ? e.message : t('config.catalogo.erro'));
     } finally {
       setTrabalhando(false);
     }
@@ -157,11 +153,11 @@ export default function Configuracoes() {
         { method: 'POST' },
       );
       setOk(
-        `Demonstração criada: ${r.contas} conta(s), ${r.receitas} receita(s), ${r.despesas} despesa(s) em 6 meses.`,
+        t('config.demo.okCriada', { contas: r.contas, rec: r.receitas, des: r.despesas }),
       );
       await recarregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao gerar demonstração');
+      setErro(e instanceof Error ? e.message : t('config.demo.erroGerar'));
     } finally {
       setTrabalhando(false);
     }
@@ -179,13 +175,13 @@ export default function Configuracoes() {
       const total = r.contas + r.receitas + r.despesas;
       setOk(
         total === 0
-          ? 'Nenhum dado de demonstração para remover.'
-          : `Demonstração removida: ${r.receitas} receita(s), ${r.despesas} despesa(s), ${r.contas} conta(s). Seus dados reais foram mantidos.`,
+          ? t('config.demo.okNada')
+          : t('config.demo.okRemovida', { rec: r.receitas, des: r.despesas, contas: r.contas }),
       );
       setConfirmarDemo(false);
       await recarregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao remover demonstração');
+      setErro(e instanceof Error ? e.message : t('config.demo.erroRemover'));
     } finally {
       setTrabalhando(false);
     }
@@ -203,9 +199,9 @@ export default function Configuracoes() {
       setIntegracao(r);
       setChave('');
       setMostrarChave(false);
-      setOk('Chave do Resend salva.');
+      setOk(t('config.email.okSalva'));
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao salvar chave');
+      setErro(e instanceof Error ? e.message : t('config.email.erroSalvar'));
     } finally {
       setSalvandoEmail(false);
     }
@@ -222,9 +218,9 @@ export default function Configuracoes() {
       });
       setIntegracao(r);
       setChave('');
-      setOk('Chave removida da sua conta.');
+      setOk(t('config.email.okRemove'));
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao remover chave');
+      setErro(e instanceof Error ? e.message : t('config.email.erroRemover'));
     } finally {
       setSalvandoEmail(false);
     }
@@ -238,12 +234,12 @@ export default function Configuracoes() {
       setOk('');
       const r = await api<Record<string, number>>(perigo.path, { method: 'DELETE' });
       const total = Object.values(r).reduce((s, n) => s + n, 0);
-      setOk(`Apagados ${total} registro(s).`);
+      setOk(t('config.perigo.ok', { total }));
       setPerigo(null);
       setConfirmacao('');
       await recarregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao apagar');
+      setErro(e instanceof Error ? e.message : t('config.perigo.erro'));
     } finally {
       setTrabalhando(false);
     }
@@ -254,14 +250,20 @@ export default function Configuracoes() {
   const [confirmaSubstituir, setConfirmaSubstituir] = useState(false);
   const { tema, largura, setTema, setLargura } = useAparencia();
 
+  const ABAS: Array<{ valor: Aba; rotulo: string }> = [
+    { valor: 'geral', rotulo: t('config.abas.geral') },
+    { valor: 'backup', rotulo: t('config.abas.backup') },
+    { valor: 'email', rotulo: t('config.abas.email') },
+    { valor: 'perigo', rotulo: t('config.abas.perigo') },
+  ];
   const TEMAS: Array<{ valor: Tema; rotulo: string }> = [
-    { valor: 'claro', rotulo: 'Claro' },
-    { valor: 'escuro', rotulo: 'Escuro' },
-    { valor: 'sistema', rotulo: 'Sistema' },
+    { valor: 'claro', rotulo: t('config.temas.claro') },
+    { valor: 'escuro', rotulo: t('config.temas.escuro') },
+    { valor: 'sistema', rotulo: t('config.temas.sistema') },
   ];
   const LARGURAS: Array<{ valor: Largura; rotulo: string }> = [
-    { valor: 'fluida', rotulo: 'Fluida' },
-    { valor: 'fixa', rotulo: 'Fixa' },
+    { valor: 'fluida', rotulo: t('config.larguras.fluida') },
+    { valor: 'fixa', rotulo: t('config.larguras.fixa') },
   ];
 
   async function importar() {
@@ -274,7 +276,7 @@ export default function Configuracoes() {
       try {
         backup = JSON.parse(await arquivo.text());
       } catch {
-        throw new Error('Arquivo inválido — não é um JSON válido');
+        throw new Error(t('config.importar.erroJson'));
       }
       const r = await api<{
         modo: string;
@@ -285,24 +287,31 @@ export default function Configuracoes() {
         despesas: number;
       }>('/api/importar', { method: 'POST', body: JSON.stringify({ modo, backup }) });
       setOk(
-        `Importação (${r.modo}): ${r.contas} conta(s), ${r.receitas} receita(s), ${r.despesas} despesa(s), ${r.categorias} categoria(s), ${r.formasPagamento} forma(s) novas.`,
+        t('config.importar.ok', {
+          modo: r.modo,
+          contas: r.contas,
+          rec: r.receitas,
+          des: r.despesas,
+          cats: r.categorias,
+          formas: r.formasPagamento,
+        }),
       );
       setArquivo(null);
       setConfirmaSubstituir(false);
       await recarregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao importar');
+      setErro(e instanceof Error ? e.message : t('config.importar.erro'));
     } finally {
       setTrabalhando(false);
     }
   }
 
   const itens: Array<[string, number | undefined]> = [
-    ['Contas', contagem?.contas],
-    ['Receitas', contagem?.receitas],
-    ['Despesas', contagem?.despesas],
-    ['Categorias', contagem?.categorias],
-    ['Formas de pagamento', contagem?.formasPagamento],
+    [t('layout.nav.contas'), contagem?.contas],
+    [t('resumo.receitas'), contagem?.receitas],
+    [t('resumo.despesas'), contagem?.despesas],
+    [t('layout.nav.categorias'), contagem?.categorias],
+    [t('layout.nav.formasPagamento'), contagem?.formasPagamento],
   ];
 
   const card = 'rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800';
@@ -313,7 +322,7 @@ export default function Configuracoes() {
 
   return (
     <main className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <TituloPagina Icon={IconeEngrenagem}>Configurações</TituloPagina>
+      <TituloPagina Icon={IconeEngrenagem}>{t('config.titulo')}</TituloPagina>
       <AlertaErro mensagem={erro} />
       {ok && (
         <p role="status" className="rounded-xl bg-emerald-50 dark:bg-emerald-950/50 px-4 py-3 text-sm font-medium text-emerald-700 dark:text-emerald-300 ring-1 ring-inset ring-emerald-200 dark:ring-emerald-900">
@@ -321,7 +330,7 @@ export default function Configuracoes() {
         </p>
       )}
 
-      <nav aria-label="Seções de configurações" role="tablist" className="grid grid-cols-4 gap-1 rounded-2xl bg-white dark:bg-slate-900 p-1.5 text-sm font-semibold shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+      <nav aria-label={t('config.secoes')} role="tablist" className="grid grid-cols-4 gap-1 rounded-2xl bg-white dark:bg-slate-900 p-1.5 text-sm font-semibold shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
         {ABAS.map((a) => (
           <button
             key={a.valor}
@@ -346,10 +355,10 @@ export default function Configuracoes() {
 
       {aba === 'geral' && (
         <div role="tabpanel" className="space-y-6">
-      <section aria-label="Seus dados" className={card}>
-        <h2 className="text-base font-bold">Seus dados</h2>
+      <section aria-label={t('config.dados')} className={card}>
+        <h2 className="text-base font-bold">{t('config.dados')}</h2>
         {carregando ? (
-          <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">Carregando…</p>
+          <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">{t('comum.carregando')}</p>
         ) : (
           <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
             {itens.map(([rotulo, n]) => (
@@ -362,11 +371,32 @@ export default function Configuracoes() {
         )}
       </section>
 
-      <section aria-label="Aparência" className={card}>
-        <h2 className="text-base font-bold">Aparência</h2>
+      <section aria-label={t('config.aparencia')} className={card}>
+        <h2 className="text-base font-bold">{t('config.aparencia')}</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Tema</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('config.idioma.label')}</p>
+            <div className="mt-1 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 text-sm font-semibold dark:bg-slate-800">
+              {(['pt-BR', 'en'] as Idioma[]).map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => salvarIdioma(l)}
+                  aria-pressed={i18n.language === l}
+                  className={`rounded-lg px-3 py-2 transition ${
+                    i18n.language === l
+                      ? 'bg-slate-900 text-white shadow'
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
+                >
+                  {l === 'pt-BR' ? t('config.idioma.pt') : t('config.idioma.en')}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">{t('config.idioma.ajuda')}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('config.tema')}</p>
             <div className="mt-1 grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 text-sm font-semibold dark:bg-slate-800">
               {TEMAS.map((t) => (
                 <button
@@ -386,7 +416,7 @@ export default function Configuracoes() {
             </div>
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Largura do conteúdo</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('config.largura')}</p>
             <div className="mt-1 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 text-sm font-semibold dark:bg-slate-800">
               {LARGURAS.map((l) => (
                 <button
@@ -407,8 +437,7 @@ export default function Configuracoes() {
           </div>
         </div>
         <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-          “Sistema” acompanha o modo claro/escuro do seu dispositivo. “Fixa” centraliza o conteúdo
-          em largura limitada; “Fluida” usa toda a tela.
+          {t('config.aparenciaAjuda')}
         </p>
       </section>
         </div>
@@ -416,9 +445,9 @@ export default function Configuracoes() {
 
       {aba === 'backup' && (
         <div role="tabpanel" className="space-y-6">
-      <section aria-label="Demonstração" className={card}>
+      <section aria-label={t('config.demo.titulo')} className={card}>
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-base font-bold">Demonstração</h2>
+          <h2 className="text-base font-bold">{t('config.demo.titulo')}</h2>
           {demo && (
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset ${
               demo.existe
@@ -426,56 +455,53 @@ export default function Configuracoes() {
                 : 'bg-slate-100 text-slate-500 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700'
             }`}>
               {demo.existe
-                ? `Ativa · ${demo.contas} conta(s), ${demo.receitas + demo.despesas} lançamento(s)`
-                : 'Não gerada'}
+                ? t('config.demo.ativa', { contas: demo.contas, lancamentos: demo.receitas + demo.despesas })
+                : t('config.demo.inativa')}
             </span>
           )}
         </div>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
-          Cria 3 contas (Banco, Carteira e Cartão Demo) com 6 meses de lançamentos em todas as
-          categorias — ideal para explorar relatórios. A remoção apaga só o demo, sem tocar nos
-          seus dados.
+          {t('config.demo.texto')}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {!demo?.existe ? (
             <button type="button" onClick={gerarDemo} disabled={trabalhando} className={btnSec}>
-              {trabalhando ? 'Gerando…' : 'Gerar demonstração'}
+              {trabalhando ? t('config.demo.gerando') : t('config.demo.gerar')}
             </button>
           ) : (
             <button type="button" onClick={() => setConfirmarDemo(true)} disabled={trabalhando} className={btnSec}>
-              Remover demonstração
+              {t('config.demo.remover')}
             </button>
           )}
         </div>
       </section>
 
-      <section aria-label="Exportar dados" className={card}>
-        <h2 className="text-base font-bold">Exportar dados</h2>
+      <section aria-label={t('config.exportar.titulo')} className={card}>
+        <h2 className="text-base font-bold">{t('config.exportar.titulo')}</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
-          Baixe uma cópia dos seus lançamentos e contas para backup ou planilha.
+          {t('config.exportar.texto')}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <button type="button" onClick={exportarJSON} disabled={trabalhando} className={btnSec}>
-            Backup completo (JSON)
+            {t('config.exportar.json')}
           </button>
           <button type="button" onClick={() => exportarCSV('receitas')} disabled={trabalhando} className={btnSec}>
-            Receitas (CSV)
+            {t('config.exportar.receitas')}
           </button>
           <button type="button" onClick={() => exportarCSV('despesas')} disabled={trabalhando} className={btnSec}>
-            Despesas (CSV)
+            {t('config.exportar.despesas')}
           </button>
         </div>
       </section>
 
-      <section aria-label="Importar backup" className={card}>
-        <h2 className="text-base font-bold">Importar backup</h2>
+      <section aria-label={t('config.importar.titulo')} className={card}>
+        <h2 className="text-base font-bold">{t('config.importar.titulo')}</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
-          Restaura o arquivo JSON gerado em “Backup completo”. Mesclar reaproveita contas e catálogo
-          existentes; substituir apaga lançamentos e contas atuais antes de importar.
+          {t('config.importar.texto')}
         </p>
         <div className="mt-4 space-y-3">
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
-            Arquivo JSON
+            {t('config.importar.arquivo')}
             <input
               type="file"
               accept=".json,application/json"
@@ -493,7 +519,7 @@ export default function Configuracoes() {
                   modo === m ? 'bg-slate-900 text-white shadow' : 'text-slate-500 dark:text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:text-slate-200 dark:hover:text-slate-200'
                 }`}
               >
-                {m}
+                {t(`config.importar.${m}`)}
               </button>
             ))}
           </div>
@@ -505,7 +531,7 @@ export default function Configuracoes() {
                 onChange={(e) => setConfirmaSubstituir(e.target.checked)}
                 className="mt-0.5 h-4 w-4 accent-red-600"
               />
-              Entendo que lançamentos e contas atuais serão apagados antes da importação.
+              {t('config.importar.confirmaSubstituir')}
             </label>
           )}
           <button
@@ -514,19 +540,19 @@ export default function Configuracoes() {
             disabled={trabalhando || !arquivo || (modo === 'substituir' && !confirmaSubstituir)}
             className={btnSec}
           >
-            {trabalhando ? 'Importando…' : 'Importar backup'}
+            {trabalhando ? t('config.importar.importando') : t('config.importar.botao')}
           </button>
         </div>
       </section>
 
-      <section aria-label="Catálogo" className={card}>
-        <h2 className="text-base font-bold">Catálogo</h2>
+      <section aria-label={t('config.catalogo.titulo')} className={card}>
+        <h2 className="text-base font-bold">{t('config.catalogo.titulo')}</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
-          Repõe categorias e formas de pagamento padrão que foram excluídas, sem duplicar o que já existe.
+          {t('config.catalogo.texto')}
         </p>
         <div className="mt-4">
           <button type="button" onClick={restaurar} disabled={trabalhando} className={btnSec}>
-            Restaurar itens padrão
+            {t('config.catalogo.botao')}
           </button>
         </div>
       </section>
@@ -535,9 +561,9 @@ export default function Configuracoes() {
 
       {aba === 'email' && (
         <div role="tabpanel" className="space-y-6">
-      <section aria-label="E-mail" className={card}>
+      <section aria-label={t('config.abas.email')} className={card}>
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-base font-bold">E-mail (Resend)</h2>
+          <h2 className="text-base font-bold">{t('config.email.titulo')}</h2>
           {integracao ? (
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset ${
               integracao.email.configurado
@@ -545,39 +571,39 @@ export default function Configuracoes() {
                 : 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-900'
             }`}>
               {integracao.email.configurado
-                ? `Ativo · ${integracao.email.mascarada}`
-                : 'Não configurado'}
+                ? t('config.email.ativo', { mascarada: integracao.email.mascarada })
+                : t('config.email.inativo')}
             </span>
           ) : (
-            <span className="text-xs text-slate-400 dark:text-slate-500">Carregando…</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">{t('comum.carregando')}</span>
           )}
         </div>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
-          Ativa os e-mails de recuperação de senha. Para conseguir a chave:
+          {t('config.email.intro')}
         </p>
         <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-400 dark:text-slate-500">
           <li>
-            Crie a conta grátis em{' '}
+            {t('config.email.passo1a')}{' '}
             <a href="https://resend.com" target="_blank" rel="noreferrer" className="font-semibold text-sky-700 underline dark:text-sky-400">
               resend.com
             </a>{' '}
-            (plano grátis: 100 e-mails/dia).
+            {t('config.email.passo1b')}
           </li>
-          <li>Em <strong>API Keys</strong>, crie uma chave com permissão de envio (<em>Sending access</em>).</li>
-          <li>Cole a chave abaixo (começa com <code className="rounded bg-slate-100 dark:bg-slate-800 px-1 font-mono text-xs">re_</code>) e salve.</li>
+          <li>{t('config.email.passo2')}</li>
+          <li>{t('config.email.passo3')}</li>
         </ol>
         <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-          Sem domínio próprio verificado no Resend, os e-mails só chegam ao e-mail da sua conta Resend.
+          {t('config.email.semDominio')}
         </p>
         <div className="mt-4 space-y-3">
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
-            Chave da API
+            {t('config.email.chaveLabel')}
             <span className="mt-1 flex gap-2">
               <input
                 type={mostrarChave ? 'text' : 'password'}
                 value={chave}
                 onChange={(e) => setChave(e.target.value)}
-                placeholder={integracao?.email.origem === 'ambiente' ? 'Usando chave do servidor (.env)' : 're_…'}
+                placeholder={integracao?.email.origem === 'ambiente' ? t('config.email.placeholderAmbiente') : 're_…'}
                 autoComplete="off"
                 spellCheck={false}
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 font-mono text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
@@ -588,7 +614,7 @@ export default function Configuracoes() {
                 aria-pressed={mostrarChave}
                 className={btnSec}
               >
-                {mostrarChave ? 'Ocultar' : 'Mostrar'}
+                {mostrarChave ? t('config.email.ocultar') : t('config.email.mostrar')}
               </button>
             </span>
           </label>
@@ -599,7 +625,7 @@ export default function Configuracoes() {
               disabled={salvandoEmail || !chave.trim()}
               className={btnSec}
             >
-              {salvandoEmail ? 'Salvando…' : 'Salvar chave'}
+              {salvandoEmail ? t('comum.salvando') : t('config.email.salvar')}
             </button>
             {integracao?.email.origem === 'conta' && (
               <button
@@ -608,16 +634,14 @@ export default function Configuracoes() {
                 disabled={salvandoEmail}
                 className={btnSec}
               >
-                Remover
+                {t('config.email.remover')}
               </button>
             )}
           </div>
         </div>
         <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-          A chave fica salva só na sua conta e nunca é exibida inteira de novo.
-          {integracao?.email.origem === 'ambiente'
-            ? ' Há uma chave global no servidor (.env); a salva aqui vale só para você.'
-            : ''}
+          {t('config.email.nota')}
+          {integracao?.email.origem === 'ambiente' ? t('config.email.notaAmbiente') : ''}
         </p>
       </section>
         </div>
@@ -625,10 +649,10 @@ export default function Configuracoes() {
 
       {aba === 'perigo' && (
         <div role="tabpanel" className="space-y-6">
-      <section aria-label="Zona de perigo" className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-red-200">
-        <h2 className="text-base font-bold text-red-700 dark:text-red-400">Zona de perigo</h2>
+      <section aria-label={t('config.perigo.titulo')} className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-red-200">
+        <h2 className="text-base font-bold text-red-700 dark:text-red-400">{t('config.perigo.titulo')}</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
-          Ações irreversíveis. Exporte um backup antes, se precisar dos dados.
+          {t('config.perigo.texto')}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <button
@@ -636,26 +660,26 @@ export default function Configuracoes() {
             onClick={() =>
               setPerigo({
                 path: '/api/dados/lancamentos',
-                titulo: 'Apagar lançamentos?',
-                detalhe: 'Todas as receitas e despesas serão apagadas. Contas e catálogo são mantidos.',
+                titulo: t('config.perigo.tituloLancamentos'),
+                detalhe: t('config.perigo.detalheLancamentos'),
               })
             }
             className={btnDanger}
           >
-            Apagar lançamentos
+            {t('config.perigo.apagarLancamentos')}
           </button>
           <button
             type="button"
             onClick={() =>
               setPerigo({
                 path: '/api/dados/tudo',
-                titulo: 'Apagar lançamentos e contas?',
-                detalhe: 'Receitas, despesas e contas serão apagadas. Categorias, formas e perfil são mantidos.',
+                titulo: t('config.perigo.tituloTudo'),
+                detalhe: t('config.perigo.detalheTudo'),
               })
             }
             className={btnDanger}
           >
-            Apagar tudo
+            {t('config.perigo.apagarTudo')}
           </button>
         </div>
       </section>
@@ -668,7 +692,7 @@ export default function Configuracoes() {
         <Modal titulo={perigo.titulo} onFechar={() => { setPerigo(null); setConfirmacao(''); }}>
           <p className="text-sm text-slate-600 dark:text-slate-400 dark:text-slate-500">{perigo.detalhe}</p>
           <label className="mt-4 block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
-            Digite <strong>APAGAR</strong> para confirmar
+            {t('config.perigo.digite')}
             <input
               value={confirmacao}
               onChange={(e) => setConfirmacao(e.target.value)}
@@ -684,24 +708,23 @@ export default function Configuracoes() {
               disabled={trabalhando || confirmacao.trim().toUpperCase() !== 'APAGAR'}
               className={btnDanger}
             >
-              {trabalhando ? 'Apagando…' : 'Confirmar exclusão'}
+              {trabalhando ? t('config.perigo.apagando') : t('config.perigo.confirmarExclusao')}
             </button>
             <button
               type="button"
               onClick={() => { setPerigo(null); setConfirmacao(''); }}
               className="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-800/50 dark:hover:bg-slate-800"
             >
-              Cancelar
+              {t('comum.cancelar')}
             </button>
           </div>
         </Modal>
       )}
 
       {confirmarDemo && (
-        <Modal titulo="Remover demonstração?" onFechar={() => setConfirmarDemo(false)}>
+        <Modal titulo={t('config.demo.removerTitulo')} onFechar={() => setConfirmarDemo(false)}>
           <p className="text-sm text-slate-600 dark:text-slate-400 dark:text-slate-500">
-            As 3 contas demo e os lançamentos de demonstração serão apagados. Seus dados reais
-            serão mantidos.
+            {t('config.demo.removerTexto')}
           </p>
           <div className="mt-4 grid gap-2">
             <button
@@ -710,14 +733,14 @@ export default function Configuracoes() {
               disabled={trabalhando}
               className={btnDanger}
             >
-              {trabalhando ? 'Removendo…' : 'Confirmar remoção'}
+              {trabalhando ? t('config.demo.removendo') : t('config.demo.confirmarRemocao')}
             </button>
             <button
               type="button"
               onClick={() => setConfirmarDemo(false)}
               className="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-800/50 dark:hover:bg-slate-800"
             >
-              Cancelar
+              {t('comum.cancelar')}
             </button>
           </div>
         </Modal>

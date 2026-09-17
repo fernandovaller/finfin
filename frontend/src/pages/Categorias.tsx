@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, CORES_CATEGORIA, type Categoria } from '../api';
 import {
   AlertaErro,
@@ -16,6 +17,7 @@ import {
 type Tipo = 'despesa' | 'receita';
 
 export default function Categorias() {
+  const { t } = useTranslation();
   const [tipo, setTipo] = useState<Tipo>('despesa');
   const [itens, setItens] = useState<Categoria[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -37,7 +39,7 @@ export default function Categorias() {
       setItens(await api<Categoria[]>('/api/categorias'));
       setSincronizadoEm(new Date());
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao carregar dados');
+      setErro(e instanceof Error ? e.message : t('comum.falhaCarregar'));
     } finally {
       setCarregando(false);
     }
@@ -71,7 +73,7 @@ export default function Categorias() {
       if (novoTipo !== tipo) setTipo(novoTipo);
       await recarregar();
     } catch (err) {
-      setErro(err instanceof Error ? err.message : 'Falha ao salvar');
+      setErro(err instanceof Error ? err.message : t('comum.falhaSalvar'));
     } finally {
       setSalvando(false);
     }
@@ -90,7 +92,7 @@ export default function Categorias() {
       setEditando(null);
       await recarregar();
     } catch (err) {
-      setErro(err instanceof Error ? err.message : 'Falha ao salvar');
+      setErro(err instanceof Error ? err.message : t('comum.falhaSalvar'));
     } finally {
       setSalvando(false);
     }
@@ -104,7 +106,7 @@ export default function Categorias() {
       setExcluindo(null);
       await recarregar();
     } catch (err) {
-      setErro(err instanceof Error ? err.message : 'Falha ao excluir');
+      setErro(err instanceof Error ? err.message : t('comum.falhaExcluir'));
       setExcluindo(null);
     }
   }
@@ -115,59 +117,61 @@ export default function Categorias() {
   return (
     <main className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center gap-3">
-        <TituloPagina Icon={IconeTag}>Categorias</TituloPagina>
+        <TituloPagina Icon={IconeTag}>{t('categorias.titulo')}</TituloPagina>
         <span className="flex-1" />
         <button
           type="button"
           onClick={abrirNovo}
           className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
         >
-          + Nova categoria
+          {t('categorias.nova')}
         </button>
       </div>
       <AlertaErro mensagem={erro} />
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="grid w-full max-w-xs grid-cols-2 gap-1 rounded-xl bg-slate-100 dark:bg-slate-800 p-1 text-sm font-semibold sm:w-auto">
-          {(['despesa', 'receita'] as const).map((t) => (
+          {(['despesa', 'receita'] as const).map((t2) => (
             <button
-              key={t}
+              key={t2}
               type="button"
-              onClick={() => setTipo(t)}
-              aria-pressed={tipo === t}
+              onClick={() => setTipo(t2)}
+              aria-pressed={tipo === t2}
               className={`rounded-lg px-4 py-2 capitalize transition ${
-                tipo === t
+                tipo === t2
                   ? 'bg-slate-900 text-white shadow dark:bg-slate-100 dark:text-slate-900'
                   : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
-              {t}
+              {t(`form.${t2}`)}
             </button>
           ))}
         </div>
         <p className="text-sm text-slate-400 dark:text-slate-500">
-          {visiveis.length} {visiveis.length === 1 ? 'categoria' : 'categorias'} de{' '}
-          {tipo === 'receita' ? 'receitas' : 'despesas'}
+          {t('categorias.contagem', {
+            count: visiveis.length,
+            tipo: t(tipo === 'receita' ? 'categorias.tipoReceitas' : 'categorias.tipoDespesas'),
+          })}
         </p>
       </div>
 
       <section
-        aria-label="Categorias cadastradas"
+        aria-label={t('categorias.listaLabel')}
         className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"
       >
         {carregando ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Carregando…</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">{t('comum.carregando')}</p>
         ) : visiveis.length === 0 ? (
           <div className="px-4 py-8 text-center">
             <p className="text-sm text-slate-400 dark:text-slate-500">
-              Nenhuma categoria de {tipo} cadastrada.
+              {t('categorias.vazia', { tipo: t(`form.${tipo}`) })}
             </p>
             <button
               type="button"
               onClick={abrirNovo}
               className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-700"
             >
-              Criar primeira categoria
+              {t('categorias.criarPrimeira')}
             </button>
           </div>
         ) : (
@@ -184,8 +188,8 @@ export default function Categorias() {
                 <button
                   type="button"
                   onClick={() => setEditando(c)}
-                  aria-label={`Editar categoria ${c.nome}`}
-                  title="Editar"
+                  aria-label={t('categorias.editarAria', { nome: c.nome })}
+                  title={t('comum.editar')}
                   className="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-200"
                 >
                   <IconeLapiz className="h-4 w-4" />
@@ -193,8 +197,8 @@ export default function Categorias() {
                 <button
                   type="button"
                   onClick={() => setExcluindo(c)}
-                  aria-label={`Excluir categoria ${c.nome}`}
-                  title="Excluir"
+                  aria-label={t('categorias.excluirAria', { nome: c.nome })}
+                  title={t('comum.excluir')}
                   className="rounded-lg p-1.5 text-slate-300 transition hover:bg-red-50 dark:hover:bg-red-950/50 hover:text-red-600"
                 >
                   <IconeLixeira className="h-4 w-4" />
@@ -208,45 +212,45 @@ export default function Categorias() {
       <StatusSync carregando={carregando} erro={erro} sincronizadoEm={sincronizadoEm} />
 
       {modalNovo && (
-        <Modal titulo="Nova categoria" onFechar={() => setModalNovo(false)}>
+        <Modal titulo={t('categorias.novaModal')} onFechar={() => setModalNovo(false)}>
           <form onSubmit={adicionar} className="space-y-4">
             <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 dark:bg-slate-800 p-1 text-sm font-semibold">
-              {(['despesa', 'receita'] as const).map((t) => (
+              {(['despesa', 'receita'] as const).map((t2) => (
                 <button
-                  key={t}
+                  key={t2}
                   type="button"
-                  onClick={() => setNovoTipo(t)}
-                  aria-pressed={novoTipo === t}
+                  onClick={() => setNovoTipo(t2)}
+                  aria-pressed={novoTipo === t2}
                   className={`rounded-lg px-3 py-2 capitalize transition ${
-                    novoTipo === t
+                    novoTipo === t2
                       ? 'bg-slate-900 text-white shadow dark:bg-slate-100 dark:text-slate-900'
                       : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
-                  {t}
+                  {t(`form.${t2}`)}
                 </button>
               ))}
             </div>
             <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-              Nome
+              {t('categorias.nome')}
               <input
                 value={novoNome}
                 onChange={(e) => setNovoNome(e.target.value)}
                 required
                 autoFocus
-                placeholder={novoTipo === 'receita' ? 'Ex.: Salário' : 'Ex.: Lazer'}
+                placeholder={novoTipo === 'receita' ? t('categorias.placeholderReceita') : t('categorias.placeholderDespesa')}
                 className={inputCls}
               />
             </label>
             <div>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Cor</p>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('categorias.cor')}</p>
               <div className="mt-1.5 flex flex-wrap gap-2">
                 {CORES_CATEGORIA.map((c) => (
                   <button
                     key={c}
                     type="button"
                     onClick={() => setNovoCor(c)}
-                    aria-label={`Cor ${c}`}
+                    aria-label={t('categorias.corNome', { cor: c })}
                     aria-pressed={novoCor === c}
                     className={`h-8 w-8 rounded-full transition ${corSwatch(c)} ${
                       novoCor === c ? 'ring-2 ring-slate-900 ring-offset-2' : 'opacity-60 hover:opacity-100'
@@ -261,14 +265,14 @@ export default function Categorias() {
                 onClick={() => setModalNovo(false)}
                 className="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                Cancelar
+                {t('comum.cancelar')}
               </button>
               <button
                 type="submit"
                 disabled={salvando}
                 className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 disabled:cursor-wait disabled:opacity-60"
               >
-                {salvando ? 'Salvando…' : 'Adicionar'}
+                {salvando ? t('comum.salvando') : t('comum.adicionar')}
               </button>
             </div>
           </form>
@@ -276,10 +280,10 @@ export default function Categorias() {
       )}
 
       {editando && (
-        <Modal titulo={`Editar "${editando.nome}"`} onFechar={() => setEditando(null)}>
+        <Modal titulo={t('categorias.editarModal', { nome: editando.nome })} onFechar={() => setEditando(null)}>
           <form onSubmit={salvarEdicao} className="space-y-4">
             <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-              Nome
+              {t('categorias.nome')}
               <input
                 value={editando.nome}
                 onChange={(e) => setEditando({ ...editando, nome: e.target.value })}
@@ -289,14 +293,14 @@ export default function Categorias() {
               />
             </label>
             <div>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Cor</p>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('categorias.cor')}</p>
               <div className="mt-1.5 flex flex-wrap gap-2">
                 {CORES_CATEGORIA.map((c) => (
                   <button
                     key={c}
                     type="button"
                     onClick={() => setEditando({ ...editando, cor: c })}
-                    aria-label={`Cor ${c}`}
+                    aria-label={t('categorias.corNome', { cor: c })}
                     aria-pressed={editando.cor === c}
                     className={`h-8 w-8 rounded-full transition ${corSwatch(c)} ${
                       editando.cor === c
@@ -313,14 +317,14 @@ export default function Categorias() {
                 onClick={() => setEditando(null)}
                 className="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                Cancelar
+                {t('comum.cancelar')}
               </button>
               <button
                 type="submit"
                 disabled={salvando}
                 className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
               >
-                {salvando ? 'Salvando…' : 'Salvar'}
+                {salvando ? t('comum.salvando') : t('comum.salvar')}
               </button>
             </div>
           </form>
@@ -329,7 +333,7 @@ export default function Categorias() {
 
       {excluindo && (
         <ConfirmarExclusao
-          descricao={`categoria "${excluindo.nome}"`}
+          descricao={t('categorias.excluirDescricao', { nome: excluindo.nome })}
           onCancelar={() => setExcluindo(null)}
           onConfirmar={excluir}
         />

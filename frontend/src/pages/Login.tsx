@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth';
 import { AlertaErro } from '../ui';
 
@@ -7,6 +8,7 @@ type Modo = 'entrar' | 'criar';
 
 export default function Login() {
   const { entrar, criarConta } = useAuth();
+  const { t } = useTranslation();
   const navegar = useNavigate();
   const [modo, setModo] = useState<Modo>('entrar');
   const [nome, setNome] = useState('');
@@ -27,7 +29,7 @@ export default function Login() {
       }
       navegar('/', { replace: true });
     } catch (err) {
-      setErro(err instanceof Error ? err.message : 'Falha na autenticação');
+      setErro(err instanceof Error ? err.message : t('comum.falhaAuth'));
     } finally {
       setEnviando(false);
     }
@@ -38,11 +40,11 @@ export default function Login() {
       <div className="w-full max-w-sm">
         <div className="mb-6 flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white p-1 shadow-lg shadow-slate-950/40">
-            <img src="/favicon-96x96.png" alt="Logotipo FinFin" className="h-full w-full object-contain" />
+            <img src="/favicon-96x96.png" alt={t('layout.logoAlt')} className="h-full w-full object-contain" />
           </div>
           <div>
             <p className="text-xl font-bold tracking-tight text-white">FinFin</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">Financeiro pessoal</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">{t('layout.subtitulo')}</p>
           </div>
         </div>
 
@@ -50,8 +52,8 @@ export default function Login() {
           <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 dark:bg-slate-800 p-1" role="tablist">
             {(
               [
-                ['entrar', 'Entrar'],
-                ['criar', 'Criar conta'],
+                ['entrar', t('login.entrar')],
+                ['criar', t('login.criarConta')],
               ] as Array<[Modo, string]>
             ).map(([m, rotulo]) => (
               <button
@@ -73,43 +75,41 @@ export default function Login() {
           </div>
 
           <h1 className="mt-5 text-base font-bold">
-            {modo === 'entrar' ? 'Acesse sua conta' : 'Crie sua conta'}
+            {modo === 'entrar' ? t('login.tituloEntrar') : t('login.tituloCriar')}
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
-            {modo === 'entrar'
-              ? 'Entre para ver seus lançamentos.'
-              : 'Cada conta enxerga só os próprios lançamentos.'}
+            {modo === 'entrar' ? t('login.subEntrar') : t('login.subCriar')}
           </p>
 
           <form onSubmit={onSubmit} className="mt-4 space-y-3">
             {modo === 'criar' && (
               <label className="block">
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Nome</span>
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('login.nome')}</span>
                 <input
                   type="text"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   required
                   autoComplete="name"
-                  placeholder="Seu nome"
+                  placeholder={t('login.nomePlaceholder')}
                   className="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                 />
               </label>
             )}
             <label className="block">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">E-mail</span>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('login.email')}</span>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                placeholder="voce@exemplo.com"
+                placeholder={t('login.emailPlaceholder')}
                 className="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
               />
             </label>
             <label className="block">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Senha</span>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('login.senha')}</span>
               <input
                 type="password"
                 value={senha}
@@ -117,7 +117,7 @@ export default function Login() {
                 required
                 minLength={modo === 'criar' ? 8 : 1}
                 autoComplete={modo === 'criar' ? 'new-password' : 'current-password'}
-                placeholder={modo === 'criar' ? 'Mínimo 8 caracteres' : 'Sua senha'}
+                placeholder={modo === 'criar' ? t('login.senhaPlaceholderCriar') : t('login.senhaPlaceholderEntrar')}
                 className="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
               />
             </label>
@@ -127,7 +127,7 @@ export default function Login() {
               disabled={enviando}
               className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
             >
-              {enviando ? 'Aguarde…' : modo === 'entrar' ? 'Entrar' : 'Criar conta'}
+              {enviando ? t('comum.aguarde') : modo === 'entrar' ? t('login.entrar') : t('login.criarConta')}
             </button>
           </form>
           {modo === 'entrar' && (
@@ -135,7 +135,7 @@ export default function Login() {
               to="/recuperar-senha"
               className="mt-3 block text-center text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
             >
-              Esqueci a senha
+              {t('login.esqueci')}
             </Link>
           )}
         </div>

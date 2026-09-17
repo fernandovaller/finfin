@@ -1,4 +1,6 @@
 import type { ComponentType, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n, { localeIntl } from './i18n';
 
 export const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -6,7 +8,7 @@ export const mesAtual = () => new Date().toISOString().slice(0, 7);
 
 export function mesLabel(mes: string): string {
   const [ano, m] = mes.split('-').map(Number);
-  return new Date(ano, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  return new Date(ano, m - 1, 1).toLocaleDateString(localeIntl(), { month: 'long', year: 'numeric' });
 }
 
 export function deslocarMes(mes: string, delta: number): string {
@@ -21,7 +23,7 @@ export function formatarData(iso: string): string {
 }
 
 export function pluralLancamentos(n: number): string {
-  return `${n} lançamento${n === 1 ? '' : 's'}`;
+  return i18n.t('comum.lancamentos', { count: n });
 }
 
 /* ---------- cores de categoria (chave do banco -> classes tailwind) ---------- */
@@ -214,9 +216,10 @@ export function Avatar({
   avatar?: string | null;
   tamanho?: 'sm' | 'md' | 'lg';
 }) {
+  const { t } = useTranslation();
   const tam = tamanho === 'lg' ? 'h-20 w-20 text-2xl' : tamanho === 'sm' ? 'h-8 w-8 text-xs' : 'h-11 w-11 text-sm';
   if (avatar) {
-    return <img src={avatar} alt={`Foto de ${nome}`} className={`${tam} rounded-full object-cover ring-2 ring-white/20`} />;
+    return <img src={avatar} alt={t('ui.fotoDe', { nome })} className={`${tam} rounded-full object-cover ring-2 ring-white/20`} />;
   }
   return (
     <div
@@ -230,13 +233,14 @@ export function Avatar({
 }
 
 export function MesNav({ mes, onChange }: { mes: string; onChange: (m: string) => void }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-1 rounded-xl bg-slate-800 p-1">
       <button
         type="button"
         onClick={() => onChange(deslocarMes(mes, -1))}
         className="rounded-lg px-3 py-1.5 text-lg leading-none text-slate-300 transition hover:bg-slate-700 hover:text-white"
-        aria-label="Mês anterior"
+        aria-label={t('ui.mesAnterior')}
       >
         ‹
       </button>
@@ -250,7 +254,7 @@ export function MesNav({ mes, onChange }: { mes: string; onChange: (m: string) =
         type="button"
         onClick={() => onChange(deslocarMes(mes, 1))}
         className="rounded-lg px-3 py-1.5 text-lg leading-none text-slate-300 transition hover:bg-slate-700 hover:text-white"
-        aria-label="Próximo mês"
+        aria-label={t('ui.proximoMes')}
       >
         ›
       </button>
@@ -312,11 +316,11 @@ export function ConfirmarExclusao({
   onCancelar: () => void;
   onConfirmar: () => void;
 }) {
+  const { t } = useTranslation();
   return (
-    <Modal titulo="Excluir?" onFechar={onCancelar}>
+    <Modal titulo={t('ui.excluirTitulo')} onFechar={onCancelar}>
       <p className="text-sm text-slate-600 dark:text-slate-400 dark:text-slate-500">
-        Tem certeza que deseja excluir <strong>“{descricao}”</strong>? Essa ação não pode ser
-        desfeita.
+        {t('ui.excluirDescricao', { descricao })}
       </p>
       <div className="mt-5 grid grid-cols-2 gap-3">
         <button
@@ -324,14 +328,14 @@ export function ConfirmarExclusao({
           onClick={onCancelar}
           className="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-800/50 dark:hover:bg-slate-800"
         >
-          Cancelar
+          {t('comum.cancelar')}
         </button>
         <button
           type="button"
           onClick={onConfirmar}
           className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-red-700"
         >
-          Excluir
+          {t('comum.excluir')}
         </button>
       </div>
     </Modal>
@@ -347,24 +351,25 @@ export function StatusSync({
   erro: string;
   sincronizadoEm: Date | null;
 }) {
+  const { t } = useTranslation();
   return (
     <footer className="flex items-center justify-center gap-2 pb-4 text-xs text-slate-400 dark:text-slate-500">
       {carregando ? (
         <>
           <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
-          Sincronizando…
+          {t('ui.sync.sincronizando')}
         </>
       ) : erro ? (
         <>
           <span className="h-2 w-2 rounded-full bg-red-50 dark:bg-red-950/500" />
-          Falha na sincronização
+          {t('ui.sync.falha')}
         </>
       ) : (
         <>
           <span className="h-2 w-2 rounded-full bg-emerald-500" />
           {sincronizadoEm
-            ? `Sincronizado às ${sincronizadoEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-            : 'Sincronizado'}
+            ? t('ui.sync.sincronizadoAs', { hora: sincronizadoEm.toLocaleTimeString(localeIntl(), { hour: '2-digit', minute: '2-digit' }) })
+            : t('ui.sync.sincronizado')}
         </>
       )}
     </footer>

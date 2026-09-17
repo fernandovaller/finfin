@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api';
+import { localeIntl } from '../i18n';
 import { AlertaErro, IconeExtrato, Modal, StatusSync, TituloPagina } from '../ui';
 
 export interface RegistroAuditoria {
@@ -44,10 +46,11 @@ function corAcao(acao: string): string {
 function formataDataHora(iso: string): string {
   const d = new Date(iso.replace(' ', 'T'));
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleString(localeIntl(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
 export default function Auditoria() {
+  const { t } = useTranslation();
   const [modulo, setModulo] = useState('');
   const [acao, setAcao] = useState('');
   const [descricao, setDescricao] = useState('');
@@ -89,7 +92,7 @@ export default function Auditoria() {
       setPagina(r.pagina);
       setSincronizadoEm(new Date());
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao carregar auditoria');
+      setErro(e instanceof Error ? e.message : t('auditoria.erroCarregar'));
     } finally {
       setCarregando(false);
     }
@@ -126,7 +129,7 @@ export default function Auditoria() {
       setConfirmaLimpar(false);
       await carregar(1);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao limpar histórico');
+      setErro(e instanceof Error ? e.message : t('auditoria.erroLimpar'));
     } finally {
       setLimpando(false);
     }
@@ -140,10 +143,10 @@ export default function Auditoria() {
       setOk('');
       await api(`/api/auditoria/${restaurarAlvo.id}/restaurar`, { method: 'POST' });
       setRestaurarAlvo(null);
-      setOk(`"${restaurarAlvo.descricao}" restaurado com novo id.`);
+      setOk(t('auditoria.okRestaurado', { descricao: restaurarAlvo.descricao }));
       await carregar(dados?.pagina ?? 1);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao restaurar');
+      setErro(e instanceof Error ? e.message : t('auditoria.erroRestaurar'));
     } finally {
       setRestaurando(false);
     }
@@ -157,9 +160,9 @@ export default function Auditoria() {
   return (
     <main className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <TituloPagina Icon={IconeExtrato}>Auditoria</TituloPagina>
+        <TituloPagina Icon={IconeExtrato}>{t('auditoria.titulo')}</TituloPagina>
         <button type="button" onClick={() => setConfirmaLimpar(true)} className={btn}>
-          Limpar histórico
+          {t('auditoria.limparHistorico')}
         </button>
       </div>
       <AlertaErro mensagem={erro} />
@@ -172,45 +175,45 @@ export default function Auditoria() {
       <section className="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-            Módulo
+            {t('auditoria.modulo')}
             <select value={modulo} onChange={(e) => setModulo(e.target.value)} className={`mt-1 w-full ${input}`}>
               {MODULOS.map((m) => (
-                <option key={m} value={m}>{m === '' ? 'Todos' : m}</option>
+                <option key={m} value={m}>{m === '' ? t('auditoria.todos') : m}</option>
               ))}
             </select>
           </label>
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-            Ação
+            {t('auditoria.acao')}
             <select value={acao} onChange={(e) => setAcao(e.target.value)} className={`mt-1 w-full ${input}`}>
               {ACOES.map((a) => (
-                <option key={a} value={a}>{a === '' ? 'Todas' : a}</option>
+                <option key={a} value={a}>{a === '' ? t('auditoria.todas') : a}</option>
               ))}
             </select>
           </label>
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-            Descrição
+            {t('auditoria.descricao')}
             <input
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && pesquisar()}
-              placeholder="Ex.: Mercado, Conta Principal…"
+              placeholder={t('auditoria.descricaoPlaceholder')}
               className={`mt-1 w-full ${input}`}
             />
           </label>
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-            De
+            {t('auditoria.de')}
             <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className={`mt-1 w-full ${input}`} />
           </label>
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
-            Até
+            {t('auditoria.ate')}
             <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className={`mt-1 w-full ${input}`} />
           </label>
           <div className="flex items-end gap-2">
             <button type="button" onClick={pesquisar} disabled={carregando} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow transition hover:bg-slate-700 disabled:opacity-60">
-              {carregando ? 'Buscando…' : 'Pesquisar'}
+              {carregando ? t('auditoria.buscando') : t('auditoria.pesquisar')}
             </button>
             <button type="button" onClick={limparFiltros} className={btn}>
-              Limpar
+              {t('auditoria.limpar')}
             </button>
           </div>
         </div>
@@ -218,9 +221,9 @@ export default function Auditoria() {
 
       <section className="overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
         {carregando && !dados ? (
-          <p className="px-5 py-8 text-center text-sm text-slate-400">Carregando…</p>
+          <p className="px-5 py-8 text-center text-sm text-slate-400">{t('comum.carregando')}</p>
         ) : !dados || dados.itens.length === 0 ? (
-          <p className="px-5 py-8 text-center text-sm text-slate-400">Nenhum evento encontrado para os filtros.</p>
+          <p className="px-5 py-8 text-center text-sm text-slate-400">{t('auditoria.vazia')}</p>
         ) : (
           <>
             <ul className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -236,12 +239,12 @@ export default function Auditoria() {
                   <span className="min-w-0 flex-1 basis-48 truncate text-sm">{r.descricao || '—'}</span>
                   {r.detalhes && (
                     <button type="button" onClick={() => setDetalhe(r)} className="rounded-lg px-2 py-1 text-xs font-bold text-sky-700 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-950/50">
-                      Ver detalhe
+                      {t('auditoria.verDetalhe')}
                     </button>
                   )}
                   {podeRestaurar(r) && (
                     <button type="button" onClick={() => setRestaurarAlvo(r)} className="rounded-lg bg-emerald-600 px-2 py-1 text-xs font-bold text-white transition hover:bg-emerald-700">
-                      Restaurar
+                      {t('auditoria.restaurar')}
                     </button>
                   )}
                 </li>
@@ -249,14 +252,14 @@ export default function Auditoria() {
             </ul>
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-800 px-5 py-3 text-sm">
               <p className="text-xs text-slate-400">
-                {dados.total} evento(s) · página {dados.pagina} de {dados.totalPaginas}
+                {t('auditoria.paginacao', { total: dados.total, pag: dados.pagina, totalPag: dados.totalPaginas })}
               </p>
               <div className="flex gap-2">
                 <button type="button" disabled={dados.pagina <= 1} onClick={() => carregar(dados.pagina - 1)} className={btn}>
-                  ‹ Anterior
+                  {t('auditoria.anterior')}
                 </button>
                 <button type="button" disabled={dados.pagina >= dados.totalPaginas} onClick={() => carregar(dados.pagina + 1)} className={btn}>
-                  Próxima ›
+                  {t('auditoria.proxima')}
                 </button>
               </div>
             </div>
@@ -267,47 +270,45 @@ export default function Auditoria() {
       <StatusSync carregando={carregando} erro={erro} sincronizadoEm={sincronizadoEm} />
 
       {detalhe && (
-        <Modal titulo={`Evento #${detalhe.id} · ${detalhe.modulo}/${detalhe.acao}`} onFechar={() => setDetalhe(null)} wide>
+        <Modal titulo={t('auditoria.eventoTitulo', { id: detalhe.id, modulo: detalhe.modulo, acao: detalhe.acao })} onFechar={() => setDetalhe(null)} wide>
           <p className="text-sm text-slate-600 dark:text-slate-400">{detalhe.descricao}</p>
           <p className="mt-1 text-xs text-slate-400">{formataDataHora(detalhe.criadoEm)}</p>
           <pre className="mt-3 max-h-80 overflow-auto rounded-xl bg-slate-100 dark:bg-slate-800 p-3 text-xs">
             {JSON.stringify(JSON.parse(detalhe.detalhes ?? '{}'), null, 2)}
           </pre>
           <button type="button" onClick={() => setDetalhe(null)} className={`mt-4 w-full ${btn}`}>
-            Fechar
+            {t('auditoria.fechar')}
           </button>
         </Modal>
       )}
 
       {confirmaLimpar && (
-        <Modal titulo="Limpar histórico?" onFechar={() => setConfirmaLimpar(false)}>
+        <Modal titulo={t('auditoria.limparTitulo')} onFechar={() => setConfirmaLimpar(false)}>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Todo o histórico de auditoria será apagado. Essa ação não pode ser desfeita.
+            {t('auditoria.limparTexto')}
           </p>
           <div className="mt-4 grid gap-2">
             <button type="button" onClick={limparHistorico} disabled={limpando} className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-60">
-              {limpando ? 'Apagando…' : 'Confirmar'}
+              {limpando ? t('auditoria.apagando') : t('auditoria.confirmar')}
             </button>
             <button type="button" onClick={() => setConfirmaLimpar(false)} className={btn}>
-              Cancelar
+              {t('comum.cancelar')}
             </button>
           </div>
         </Modal>
       )}
 
       {restaurarAlvo && (
-        <Modal titulo="Restaurar registro?" onFechar={() => setRestaurarAlvo(null)}>
+        <Modal titulo={t('auditoria.restaurarTitulo')} onFechar={() => setRestaurarAlvo(null)}>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            <strong>“{restaurarAlvo.descricao}”</strong> será recriado com um novo id
-            (o id original não volta). Lançamentos só voltam se a conta ainda existir;
-            contas voltam sem vínculo com lançamentos.
+            {t('auditoria.restaurarTexto', { descricao: restaurarAlvo.descricao })}
           </p>
           <div className="mt-4 grid gap-2">
             <button type="button" onClick={restaurar} disabled={restaurando} className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60">
-              {restaurando ? 'Restaurando…' : 'Confirmar restauração'}
+              {restaurando ? t('auditoria.restaurando') : t('auditoria.confirmarRestauracao')}
             </button>
             <button type="button" onClick={() => setRestaurarAlvo(null)} className={btn}>
-              Cancelar
+              {t('comum.cancelar')}
             </button>
           </div>
         </Modal>

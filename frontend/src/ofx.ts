@@ -1,3 +1,5 @@
+import i18n from './i18n';
+
 export interface OfxItem {
   fitid: string | null;
   /** Data ISO YYYY-MM-DD extraída de DTPOSTED. */
@@ -21,7 +23,7 @@ function tag(bloco: string, nome: string): string {
 export function parseOfx(texto: string): OfxItem[] {
   const normalizado = texto.replace(/\r\n?/g, '\n');
   if (!normalizado.includes('<OFX>') && !normalizado.includes('<ofx>')) {
-    throw new Error('Arquivo inválido — não parece ser um extrato OFX');
+    throw new Error(i18n.t('ofx.erroInvalido'));
   }
   const blocos = normalizado.match(/<STMTTRN>([\s\S]*?)(?=<STMTTRN>|<\/BANKTRANLIST>)/gi) ?? [];
   const itens: OfxItem[] = [];
@@ -35,7 +37,7 @@ export function parseOfx(texto: string): OfxItem[] {
     if (!Number.isFinite(bruto) || bruto === 0) continue;
     const tipo: 'receita' | 'despesa' = bruto < 0 ? 'despesa' : 'receita';
     const valor = Math.round(Math.abs(bruto) * 100) / 100;
-    const descricao = (tag(bloco, 'MEMO') || tag(bloco, 'NAME') || 'Lançamento OFX')
+    const descricao = (tag(bloco, 'MEMO') || tag(bloco, 'NAME') || i18n.t('ofx.descricaoPadrao'))
       .replace(/\s+/g, ' ')
       .trim()
       .slice(0, 200);
@@ -47,7 +49,7 @@ export function parseOfx(texto: string): OfxItem[] {
     itens.push({ fitid, data, valor, tipo, descricao });
   }
   if (itens.length === 0) {
-    throw new Error('Nenhum lançamento encontrado no arquivo OFX');
+    throw new Error(i18n.t('ofx.erroVazio'));
   }
   return itens.sort((a, b) => a.data.localeCompare(b.data));
 }

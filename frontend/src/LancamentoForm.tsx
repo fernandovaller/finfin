@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { localeIntl } from './i18n';
 import type { Conta } from './api';
 
 export type TipoLancamento = 'receita' | 'despesa';
@@ -31,7 +33,7 @@ interface Props {
 /** Máscara de moeda: dígitos digitados viram centavos (ex.: "25000" → "250,00"). */
 function mascaraMoeda(digitos: string): string {
   if (digitos === '') return '';
-  return (Number(digitos) / 100).toLocaleString('pt-BR', {
+  return (Number(digitos) / 100).toLocaleString(localeIntl(), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -79,6 +81,7 @@ export default function LancamentoForm({
   const [nota, setNota] = useState(initial?.nota ?? '');
   const [parcelas, setParcelas] = useState(initial?.parcelas ?? 1);
   const accent = ACCENT[tipo];
+  const { t } = useTranslation();
 
   const mostraParcelas = tipo === 'despesa' && !initial?.categoria;
 
@@ -112,19 +115,19 @@ export default function LancamentoForm({
     e.preventDefault();
     const valorNum = Number(valor) / 100;
     if (!(valorNum > 0)) {
-      onErro('Informe um valor maior que zero.');
+      onErro(t('form.erro.valorZero'));
       return;
     }
     if (!categoria) {
-      onErro('Escolha uma categoria (cadastre em Categorias se precisar).');
+      onErro(t('form.erro.semCategoria'));
       return;
     }
     if (contaId === '') {
-      onErro('Escolha a conta do lançamento (cadastre em Contas se precisar).');
+      onErro(t('form.erro.semConta'));
       return;
     }
     if (mostraParcelas && (!Number.isInteger(parcelas) || parcelas < 1 || parcelas > 21)) {
-      onErro('Parcelas deve ser de 1 a 21.');
+      onErro(t('form.erro.parcelas'));
       return;
     }
     onSubmit({ data, valor: valorNum, categoria, origem, formaPagamento, contaId, nota, parcelas: mostraParcelas ? parcelas : 1 });
@@ -134,34 +137,34 @@ export default function LancamentoForm({
     <div>
       {onTipoChange && (
         <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 dark:bg-slate-800 p-1 text-sm font-semibold">
-          {(['despesa', 'receita'] as const).map((t) => (
+          {(['despesa', 'receita'] as const).map((t2) => (
             <button
-              key={t}
+              key={t2}
               type="button"
-              onClick={() => trocarTipo(t)}
+              onClick={() => trocarTipo(t2)}
               className={`rounded-lg px-3 py-2 capitalize transition ${
-                tipo === t
-                  ? t === 'receita'
+                tipo === t2
+                  ? t2 === 'receita'
                     ? 'bg-emerald-600 text-white shadow'
                     : 'bg-slate-900 text-white shadow'
                   : 'text-slate-500 dark:text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:text-slate-200 dark:hover:text-slate-200'
               }`}
             >
-              {t}
+              {t(`form.${t2}`)}
             </button>
           ))}
         </div>
       )}
       <form onSubmit={enviar} className="mt-4 space-y-3">
         <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
-          Conta
+          {t('form.conta')}
           <select
             value={contaId}
             onChange={(e) => setContaId(e.target.value === '' ? '' : Number(e.target.value))}
             required
             className={`mt-1 ${inputBase} bg-white dark:bg-slate-900 ${accent.focus}`}
           >
-            {contas.length === 0 && <option value="">Nenhuma conta cadastrada</option>}
+            {contas.length === 0 && <option value="">{t('form.nenhumaConta')}</option>}
             {contas.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.icone ? `${c.icone} ` : ''}{c.nome}{c.principal ? ' ★' : ''}
@@ -171,7 +174,7 @@ export default function LancamentoForm({
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
-            Data
+            {t('form.data')}
             <input
               type="date"
               value={data}
@@ -181,7 +184,7 @@ export default function LancamentoForm({
             />
           </label>
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
-            Valor
+            {t('form.valor')}
             <div className="relative mt-1">
               <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-slate-400 dark:text-slate-500">
                 R$
@@ -199,14 +202,14 @@ export default function LancamentoForm({
           </label>
         </div>
         <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
-          Categoria
+          {t('form.categoria')}
           <select
             value={categoria}
             onChange={(e) => setCategoria(e.target.value)}
             required
             className={`mt-1 ${inputBase} bg-white dark:bg-slate-900 ${accent.focus}`}
           >
-            {opcoesCategoria.length === 0 && <option value="">Nenhuma categoria cadastrada</option>}
+            {opcoesCategoria.length === 0 && <option value="">{t('form.nenhumaCategoria')}</option>}
             {opcoesCategoria.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -215,23 +218,23 @@ export default function LancamentoForm({
           </select>
         </label>
         <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
-          {tipo === 'receita' ? 'Origem' : 'Descrição'}
+          {tipo === 'receita' ? t('form.origemReceita') : t('form.descricaoDespesa')}
           <input
             value={origem}
             onChange={(e) => setOrigem(e.target.value)}
             required={tipo === 'receita'}
-            placeholder={tipo === 'receita' ? 'Ex.: Empresa' : 'Ex.: Aluguel'}
+            placeholder={tipo === 'receita' ? t('form.origemPlaceholderReceita') : t('form.descricaoPlaceholderDespesa')}
             className={`mt-1 ${inputBase} ${accent.focus}`}
           />
         </label>
         <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
-          Forma de pagamento
+          {t('form.formaPagamento')}
           <select
             value={formaPagamento}
             onChange={(e) => setFormaPagamento(e.target.value)}
             className={`mt-1 ${inputBase} bg-white dark:bg-slate-900 ${accent.focus}`}
           >
-            <option value="">Não informada</option>
+            <option value="">{t('form.formaNaoInformada')}</option>
             {formas.map((f) => (
               <option key={f} value={f}>
                 {f}
@@ -240,17 +243,17 @@ export default function LancamentoForm({
           </select>
         </label>
         <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
-          Nota
+          {t('form.nota')}
           <input
             value={nota}
             onChange={(e) => setNota(e.target.value)}
-            placeholder="Observação opcional"
+            placeholder={t('form.notaPlaceholder')}
             className={`mt-1 ${inputBase} ${accent.focus}`}
           />
         </label>
         {mostraParcelas && (
           <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">
-            Parcelas
+            {t('form.parcelas')}
             <input
               type="number"
               min={1}
@@ -261,10 +264,12 @@ export default function LancamentoForm({
             />
             {parcelas > 1 && (
               <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-                Serão criadas {parcelas} despesas mensais de{' '}
-                {((Number(valor) / 100 || 0) / parcelas).toLocaleString('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL',
+                {t('form.parcelasAjuda', {
+                  n: parcelas,
+                  valor: ((Number(valor) / 100 || 0) / parcelas).toLocaleString(localeIntl(), {
+                    style: 'currency',
+                    currency: 'BRL',
+                  }),
                 })}
               </p>
             )}
@@ -275,7 +280,7 @@ export default function LancamentoForm({
           disabled={submitting}
           className={`w-full rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition disabled:cursor-wait disabled:opacity-60 ${accent.submit}`}
         >
-          {submitting ? 'Salvando…' : submitLabel}
+          {submitting ? t('comum.salvando') : submitLabel}
         </button>
       </form>
     </div>
