@@ -4,10 +4,12 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
 import { json, urlencoded } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import { chmodSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { AppModule } from './app.module';
+import { assertConfigCookies } from './auth.controller';
 
 // Carrega .env do backend e da raiz do projeto (raiz tem prioridade menor;
 // variável já exportada no ambiente nunca é sobrescrita).
@@ -65,9 +67,18 @@ class FiltroErros implements ExceptionFilter {
 }
 
 async function bootstrap() {
+  // Produção sem COOKIE_SECURE=true aborta antes de escutar (fail-closed).
+  assertConfigCookies();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.setGlobalPrefix('api');
   app.use(helmet());
+  // Dados financeiros nunca em cache de disco/memória (navegador, proxy):
+  // toda resposta da API sai com no-store.
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
+    next();
+  });
   // Teto do corpo: avatar (500 KB) + lote OFX (2000 itens) cabem; gigante não.
   app.use(json({ limit: '1mb' }));
   app.use(urlencoded({ extended: true, limit: '1mb' }));

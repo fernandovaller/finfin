@@ -13,7 +13,7 @@ RUN npm run build
 
 FROM node:20-slim AS prod
 
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ gosu \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

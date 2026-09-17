@@ -4,7 +4,8 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { createHash, randomBytes, scrypt as scryptCb, timingSafeEqual } from 'crypto';
 import { Resend } from 'resend';
 import { promisify } from 'util';
@@ -164,6 +165,8 @@ export class AuthService {
     @InjectRepository(RecuperacaoSenha)
     private readonly recuperacoes: Repository<RecuperacaoSenha>,
     private readonly auditoria: AuditoriaService,
+    @InjectDataSource()
+    private readonly data: DataSource,
   ) {}
 
   /** Boot: remove sessões expiradas acumuladas no banco. */
@@ -233,32 +236,46 @@ export class AuthService {
   }
 
   /**
-   * Troca o refresh (cookie HttpOnly) por um par novo. Rotação: o refresh
-   * antigo e seus access morrem aqui — refresh reutilizado/roubado perde
-   * a validade no primeiro uso legítimo seguinte.
+   * Troca o refresh (cookie HttpOnly) por um par novo. Consumo atômico em
+   * transação: valida, deleta o refresh antigo (+ seus access) e emite o par
+   * novo no mesmo commit — duas chamadas concorrentes com o mesmo refresh
+   * não geram dois pares (a segunda vê `affected: 0` e cai em 401).
    */
   async refreshSessao(refreshToken: string): Promise<SessaoCriada> {
     const atual = refreshToken?.trim();
     if (!atual) throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
-    const refresh = await this.sessoes.findOneBy({ token: atual });
-    if (!refresh || (refresh.tipo !== null && refresh.tipo !== 'refresh')) {
-      throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
-    }
-    if (new Date(refresh.expiraEm).getTime() < Date.now()) {
-      await this.sessoes.delete({ refreshToken: atual });
-      await this.sessoes.delete({ token: atual });
-      throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
-    }
-    const usuario = await this.usuarios.findOneBy({ id: refresh.usuarioId });
-    if (!usuario) {
-      await this.sessoes.delete({ refreshToken: atual });
-      await this.sessoes.delete({ token: atual });
-      throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
-    }
-    // Rotação antes de emitir o par novo (janela mínima de reuso).
-    await this.sessoes.delete({ refreshToken: atual });
-    await this.sessoes.delete({ token: atual });
-    return this.abrirSessao(usuario);
+    return this.data.transaction(async (manager) => {
+      const sessoes = manager.getRepository(Sessao);
+      const usuarios = manager.getRepository(Usuario);
+      const refresh = await sessoes.findOneBy({ token: atual });
+      if (!refresh || (refresh.tipo !== null && refresh.tipo !== 'refresh')) {
+        throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
+      }
+      if (new Date(refresh.expiraEm).getTime() < Date.now()) {
+        await sessoes.delete({ refreshToken: atual });
+        await sessoes.delete({ token: atual });
+        throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
+      }
+      const usuario = await usuarios.findOneBy({ id: refresh.usuarioId });
+      if (!usuario) {
+        await sessoes.delete({ refreshToken: atual });
+        await sessoes.delete({ token: atual });
+        throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
+      }
+      // Consumo antes de emitir: se outra requisição já consumiu, affected=0.
+      const consumido = await sessoes.delete({ token: atual });
+      if ((consumido.affected ?? 0) === 0) {
+        throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
+      }
+      await sessoes.delete({ refreshToken: atual });
+      const token = randomBytes(32).toString('hex');
+      const novoRefresh = randomBytes(32).toString('hex');
+      const expiraEm = new Date(Date.now() + ACCESS_TTL_MS).toISOString();
+      const expiraRefresh = new Date(Date.now() + REFRESH_TTL_MS).toISOString();
+      await sessoes.save({ token: novoRefresh, usuarioId: usuario.id, expiraEm: expiraRefresh, tipo: 'refresh', refreshToken: null });
+      await sessoes.save({ token, usuarioId: usuario.id, expiraEm, tipo: 'access', refreshToken: novoRefresh });
+      return { usuario: publico(usuario), token, expiraEm, refreshToken: novoRefresh };
+    });
   }
 
   /** Atualiza nome/email/avatar do dono. Avatar = dataURL de imagem ou null (remove). */

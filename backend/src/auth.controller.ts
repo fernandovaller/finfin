@@ -25,10 +25,22 @@ function opcoesCookieRefresh(): CookieOptions {
     // Não é enviado às rotas de dados — superfície de CSRF mínima.
     path: '/api/auth',
     sameSite: 'strict',
-    // Em dev (http://localhost) o navegador rejeita Secure; em produção
-    // (https) ligue com COOKIE_SECURE=true.
-    secure: process.env.COOKIE_SECURE === 'true',
+    // Produção (https) exige canal seguro; dev (http://localhost) permite http.
+    secure: cookieSeguroAtivo(),
   };
+}
+
+/** Produção exige https: Secure=true sempre; dev segue COOKIE_SECURE. */
+function cookieSeguroAtivo(): boolean {
+  if (process.env.NODE_ENV === 'production') return true;
+  return process.env.COOKIE_SECURE === 'true';
+}
+
+/** Fail-fast no boot: produção sem COOKIE_SECURE=true é erro de deploy. */
+export function assertConfigCookies(): void {
+  if (process.env.NODE_ENV === 'production' && process.env.COOKIE_SECURE !== 'true') {
+    throw new Error('COOKIE_SECURE=true obrigatório em produção (cookie do refresh exige https)');
+  }
 }
 
 @Controller('auth')
