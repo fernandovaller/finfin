@@ -9,14 +9,63 @@ import { FormaPagamento } from './forma-pagamento.entity';
 import { Receita } from './receita.entity';
 import { AuditoriaService } from './auditoria.service';
 
+/** Teto anti-abuso: nenhum lançamento único passa de 1 trilhão. */
+const VALOR_MAXIMO = 1_000_000_000_000;
+
+function texto(body: any, campo: string, max: number, obrigatorio: boolean): string {
+  const v = body?.[campo] ?? '';
+  if (v === '' || v === undefined) {
+    if (obrigatorio) throw new BadRequestException(`Campo obrigatório: ${campo}`);
+    return '';
+  }
+  if (typeof v !== 'string') throw new BadRequestException(`Campo "${campo}" deve ser um texto`);
+  const limpo = v.trim();
+  if (obrigatorio && !limpo) throw new BadRequestException(`Campo obrigatório: ${campo}`);
+  if (limpo.length > max) {
+    throw new BadRequestException(`Campo "${campo}" grande demais (máximo ${max} caracteres)`);
+  }
+  return limpo;
+}
+
+function assertData(body: any): void {
+  if (typeof body?.data !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.data)) {
+    throw new BadRequestException('Campo "data" deve estar no formato YYYY-MM-DD');
+  }
+  const [a, m, d] = body.data.split('-').map(Number);
+  const dt = new Date(Date.UTC(a, m - 1, d));
+  if (dt.getUTCFullYear() !== a || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) {
+    throw new BadRequestException('Campo "data" inválido');
+  }
+}
+
+function assertValor(body: any): void {
+  if (typeof body.valor !== 'number' || !Number.isFinite(body.valor) || !(body.valor > 0)) {
+    throw new BadRequestException('Campo "valor" deve ser um número maior que zero');
+  }
+  if (body.valor > VALOR_MAXIMO) {
+    throw new BadRequestException('Campo "valor" grande demais');
+  }
+}
+
 function assertLancamento(body: any, campos: string[]): void {
   for (const campo of campos) {
     if (body?.[campo] === undefined || body?.[campo] === '') {
       throw new BadRequestException(`Campo obrigatório: ${campo}`);
     }
   }
-  if (typeof body.valor !== 'number' || !(body.valor > 0)) {
-    throw new BadRequestException('Campo "valor" deve ser um número maior que zero');
+  assertData(body);
+  assertValor(body);
+  // Nomes/textos com teto: evita bloat do banco e DoS de string gigante.
+  for (const campo of ['categoria', 'origem', 'descricao']) {
+    if (body?.[campo] !== undefined && body?.[campo] !== '') {
+      texto(body, campo, 120, false);
+    }
+  }
+  if (body?.formaPagamento !== undefined && body?.formaPagamento !== '') {
+    texto(body, 'formaPagamento', 80, false);
+  }
+  if (body?.nota !== undefined && body?.nota !== '') {
+    texto(body, 'nota', 2000, false);
   }
 }
 
@@ -68,11 +117,11 @@ export class AppService {
     const salva = await this.receitas.save({
       data: body.data,
       valor: body.valor,
-      categoria: body.categoria,
-      origem: body.origem,
-      formaPagamento: body.formaPagamento ?? '',
+      categoria: texto(body, 'categoria', 120, true),
+      origem: texto(body, 'origem', 120, true),
+      formaPagamento: texto(body, 'formaPagamento', 80, false),
       contaId,
-      nota: body.nota ?? '',
+      nota: texto(body, 'nota', 2000, false),
       usuarioId,
     });
     await this.auditoria.registrar(usuarioId, {
@@ -89,14 +138,14 @@ export class AppService {
     assertLancamento(body, ['data', 'valor', 'categoria']);
     const contaId = await this.assertConta(usuarioId, body?.contaId);
     const totalParcelas = assertParcelas(body);
-    const nota = body.nota ?? '';
+    const nota = texto(body, 'nota', 2000, false);
     if (totalParcelas === 1) {
       const salva = await this.despesas.save({
         data: body.data,
         valor: body.valor,
-        categoria: body.categoria,
-        descricao: body.descricao ?? '',
-        formaPagamento: body.formaPagamento ?? '',
+        categoria: texto(body, 'categoria', 120, true),
+        descricao: texto(body, 'descricao', 120, false),
+        formaPagamento: texto(body, 'formaPagamento', 80, false),
         contaId,
         nota,
         grupoParcela: null,
@@ -115,7 +164,9 @@ export class AppService {
     }
     // Parcelado: desdobra em N despesas mensais (competência = mês da parcela).
     const grupoParcela = randomUUID();
-    const base = (body.descricao ?? '').trim() || body.categoria;
+    const categoria = texto(body, 'categoria', 120, true);
+    const formaPagamento = texto(body, 'formaPagamento', 80, false);
+    const base = texto(body, 'descricao', 120, false) || categoria;
     const centavosTotal = Math.round(body.valor * 100);
     const baseParcela = Math.floor(centavosTotal / totalParcelas);
     const resto = centavosTotal - baseParcela * totalParcelas;
@@ -125,9 +176,9 @@ export class AppService {
       return {
         data: somarMeses(body.data, i),
         valor: centavos / 100,
-        categoria: body.categoria,
+        categoria,
         descricao: `${base} (${n}/${totalParcelas})`,
-        formaPagamento: body.formaPagamento ?? '',
+        formaPagamento,
         contaId,
         nota,
         grupoParcela,
@@ -157,11 +208,11 @@ export class AppService {
     Object.assign(receita, {
       data: body.data,
       valor: body.valor,
-      categoria: body.categoria,
-      origem: body.origem,
-      formaPagamento: body.formaPagamento ?? '',
+      categoria: texto(body, 'categoria', 120, true),
+      origem: texto(body, 'origem', 120, true),
+      formaPagamento: texto(body, 'formaPagamento', 80, false),
       contaId,
-      nota: body.nota ?? '',
+      nota: texto(body, 'nota', 2000, false),
     });
     const salva = await this.receitas.save(receita);
     await this.auditoria.registrar(usuarioId, {
@@ -183,11 +234,11 @@ export class AppService {
     Object.assign(despesa, {
       data: body.data,
       valor: body.valor,
-      categoria: body.categoria,
-      descricao: body.descricao ?? '',
-      formaPagamento: body.formaPagamento ?? '',
+      categoria: texto(body, 'categoria', 120, true),
+      descricao: texto(body, 'descricao', 120, false),
+      formaPagamento: texto(body, 'formaPagamento', 80, false),
       contaId,
-      nota: body.nota ?? '',
+      nota: texto(body, 'nota', 2000, false),
     });
     const salva = await this.despesas.save(despesa);
     await this.auditoria.registrar(usuarioId, {

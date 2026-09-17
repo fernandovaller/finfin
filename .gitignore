@@ -8,6 +8,10 @@ dist/
 # Banco local
 *.sqlite
 *.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3
+*.db
 
 # Extratos bancários (podem conter dados reais)
 *.ofx

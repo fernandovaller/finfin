@@ -43,6 +43,16 @@ function plural(n: number): string {
   return `${n} lançamento${n === 1 ? '' : 's'}`;
 }
 
+/** Nome com teto: evita bloat do banco e DoS de string gigante. */
+function nomeValido(valor: unknown, campo: string, max = 120): string {
+  const nome = typeof valor === 'string' ? valor.trim() : '';
+  if (!nome) throw new BadRequestException(`Campo obrigatório: ${campo}`);
+  if (nome.length > max) {
+    throw new BadRequestException(`Campo "${campo}" grande demais (máximo ${max} caracteres)`);
+  }
+  return nome;
+}
+
 @Injectable()
 export class CatalogoService {
   constructor(
@@ -68,8 +78,7 @@ export class CatalogoService {
   }
 
   async createCategoria(usuarioId: number, body: any): Promise<Categoria> {
-    const nome = body?.nome?.trim();
-    if (!nome) throw new BadRequestException('Campo obrigatório: nome');
+    const nome = nomeValido(body?.nome, 'nome');
     const tipo = body?.tipo;
     if (tipo !== 'receita' && tipo !== 'despesa') {
       throw new BadRequestException('Campo "tipo" deve ser "receita" ou "despesa"');
@@ -99,8 +108,7 @@ export class CatalogoService {
     const nomeAntigo = categoria.nome;
     const antes = { ...categoria };
     if (body?.nome !== undefined) {
-      if (!body.nome.trim()) throw new BadRequestException('Campo "nome" não pode ser vazio');
-      categoria.nome = body.nome.trim();
+      categoria.nome = nomeValido(body.nome, 'nome');
     }
     if (body?.cor !== undefined) {
       if (!(CORES_CATEGORIA as readonly string[]).includes(body.cor)) {
@@ -161,8 +169,7 @@ export class CatalogoService {
   }
 
   async createForma(usuarioId: number, body: any): Promise<FormaPagamento> {
-    const nome = body?.nome?.trim();
-    if (!nome) throw new BadRequestException('Campo obrigatório: nome');
+    const nome = nomeValido(body?.nome, 'nome');
     try {
       const salva = await this.formas.save({ nome, usuarioId });
       await this.auditoria.registrar(usuarioId, {
@@ -184,8 +191,7 @@ export class CatalogoService {
     const nomeAntigo = forma.nome;
     const antes = { ...forma };
     if (body?.nome !== undefined) {
-      if (!body.nome.trim()) throw new BadRequestException('Campo "nome" não pode ser vazio');
-      forma.nome = body.nome.trim();
+      forma.nome = nomeValido(body.nome, 'nome');
     }
     try {
       const salva = await this.formas.save(forma);
@@ -250,14 +256,16 @@ export class CatalogoService {
   }
 
   async createConta(usuarioId: number, body: any): Promise<Conta> {
-    const nome = body?.nome?.trim();
-    if (!nome) throw new BadRequestException('Campo obrigatório: nome');
+    const nome = nomeValido(body?.nome, 'nome');
     const saldoInicial = body?.saldoInicial ?? 0;
-    if (typeof saldoInicial !== 'number' || Number.isNaN(saldoInicial)) {
+    if (typeof saldoInicial !== 'number' || !Number.isFinite(saldoInicial)) {
       throw new BadRequestException('Campo "saldoInicial" deve ser um número');
     }
-    const nota = typeof body?.nota === 'string' ? body.nota : '';
-    const icone = typeof body?.icone === 'string' ? body.icone : '';
+    if (Math.abs(saldoInicial) > 1_000_000_000_000) {
+      throw new BadRequestException('Campo "saldoInicial" grande demais');
+    }
+    const nota = typeof body?.nota === 'string' ? body.nota.slice(0, 2000) : '';
+    const icone = typeof body?.icone === 'string' ? body.icone.slice(0, 20) : '';
     const principal = body?.principal === true;
     try {
       const conta = await this.contas.save({ nome, saldoInicial, nota, icone, principal, usuarioId });
@@ -282,21 +290,25 @@ export class CatalogoService {
     if (!conta) throw new NotFoundException('Conta não encontrada');
     const antes = { ...conta };
     if (body?.nome !== undefined) {
-      if (!body.nome.trim()) throw new BadRequestException('Campo "nome" não pode ser vazio');
-      conta.nome = body.nome.trim();
+      conta.nome = nomeValido(body.nome, 'nome');
     }
     if (body?.saldoInicial !== undefined) {
-      if (typeof body.saldoInicial !== 'number' || Number.isNaN(body.saldoInicial)) {
+      if (typeof body.saldoInicial !== 'number' || !Number.isFinite(body.saldoInicial)) {
         throw new BadRequestException('Campo "saldoInicial" deve ser um número');
+      }
+      if (Math.abs(body.saldoInicial) > 1_000_000_000_000) {
+        throw new BadRequestException('Campo "saldoInicial" grande demais');
       }
       conta.saldoInicial = body.saldoInicial;
     }
     if (body?.nota !== undefined) {
       if (typeof body.nota !== 'string') throw new BadRequestException('Campo "nota" inválido');
+      if (body.nota.length > 2000) throw new BadRequestException('Campo "nota" grande demais (máximo 2000 caracteres)');
       conta.nota = body.nota;
     }
     if (body?.icone !== undefined) {
       if (typeof body.icone !== 'string') throw new BadRequestException('Campo "icone" inválido');
+      if (body.icone.length > 20) throw new BadRequestException('Campo "icone" grande demais (máximo 20 caracteres)');
       conta.icone = body.icone;
     }
     if (body?.principal !== undefined) conta.principal = body.principal === true;

@@ -165,6 +165,9 @@ export class AuthService {
   async cadastro(body: any): Promise<SessaoCriada> {
     const nome = body?.nome?.trim();
     if (!nome) throw new BadRequestException('Campo obrigatório: nome');
+    if (nome.length > 120) {
+      throw new BadRequestException('Campo "nome" grande demais (máximo 120 caracteres)');
+    }
     const email = normalizaEmail(body?.email);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw new BadRequestException('Campo "email" inválido');
@@ -269,6 +272,9 @@ export class AuthService {
     if (body?.nome !== undefined) {
       const nome = body.nome?.trim();
       if (!nome) throw new BadRequestException('Campo "nome" não pode ser vazio');
+      if (nome.length > 120) {
+        throw new BadRequestException('Campo "nome" grande demais (máximo 120 caracteres)');
+      }
       usuario.nome = nome;
     }
     if (body?.email !== undefined) {

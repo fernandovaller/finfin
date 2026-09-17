@@ -1,6 +1,8 @@
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
+import { json, urlencoded } from 'express';
 import helmet from 'helmet';
 import { chmodSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -29,10 +31,46 @@ for (const origem of (process.env.CORS_ORIGINS ?? '').split(',')) {
   if (limpa) ORIGENS_PERMITIDAS.add(limpa);
 }
 
+/** Erro 500 genérico: nunca vaza stack, SQL ou caminho interno em produção. */
+@Catch()
+class FiltroErros implements ExceptionFilter {
+  catch(excecao: unknown, host: ArgumentsHost) {
+    const res = host.switchToHttp().getResponse();
+    const req = host.switchToHttp().getRequest();
+    if (excecao instanceof HttpException) {
+      const corpo = excecao.getResponse();
+      const status = excecao.getStatus();
+      // HttpException já é mensagem curada — repassa sem stack.
+      res.status(status).json(
+        typeof corpo === 'object' && corpo !== null
+          ? { ...corpo, path: undefined }
+          : { statusCode: status, message: corpo },
+      );
+      return;
+    }
+    // body-parser (limite 1mb): vira 413, não 500.
+    const codigo = (excecao as any)?.type ?? (excecao as any)?.code;
+    const statusEmbutido = (excecao as any)?.status;
+    if (codigo === 'entity.too.large' || statusEmbutido === 413) {
+      res.status(413).json({ statusCode: 413, message: 'Corpo grande demais (máximo 1 MB)' });
+      return;
+    }
+    console.error(`[erro] ${req?.method} ${req?.url}:`, excecao instanceof Error ? excecao.message : excecao);
+    res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      statusCode: 500,
+      message: 'Erro interno — tente de novo',
+    });
+  }
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
   app.use(helmet());
+  // Teto do corpo: avatar (500 KB) + lote OFX (2000 itens) cabem; gigante não.
+  app.use(json({ limit: '1mb' }));
+  app.use(urlencoded({ extended: true, limit: '1mb' }));
+  app.useGlobalFilters(new FiltroErros());
   app.use(cookieParser());
   // Em produção atrás de um proxy (nginx): descomente para o throttler enxergar
   // o IP real via X-Forwarded-For — senão todo cliente aparece como o IP do proxy.
