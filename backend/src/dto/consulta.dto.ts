@@ -63,7 +63,6 @@ export class CategoriasQueryDto {
   tipo?: string;
 }
 
-/** Lista paginada da auditoria. */
 export class AuditoriaQueryDto {
   @IsOptional()
   @textoOuIndefinido()

@@ -25,7 +25,6 @@ function opcoesCookieRefresh(): CookieOptions {
     // Não é enviado às rotas de dados — superfície de CSRF mínima.
     path: '/api/auth',
     sameSite: 'strict',
-    // Produção (https) exige canal seguro; dev (http://localhost) permite http.
     secure: cookieSeguroAtivo(),
   };
 }
@@ -123,14 +122,12 @@ export class AuthController {
     return this.auth.salvarIntegracoes(req.usuario.id, body);
   }
 
-  /** Pede o link de recuperação (público, genérico, 5 req/min por IP). */
   @Post('recuperar-senha')
   @Limite(5)
   recuperarSenha(@Body() body: RecuperarSenhaDto) {
     return this.auth.solicitarRecuperacao(body);
   }
 
-  /** Define a nova senha com o token do e-mail (público, 5 req/min por IP). */
   @Post('redefinir-senha')
   @Limite(5)
   redefinirSenha(@Body() body: RedefinirSenhaDto) {

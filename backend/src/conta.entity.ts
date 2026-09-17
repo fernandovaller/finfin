@@ -6,7 +6,6 @@ export class Conta {
   @PrimaryGeneratedColumn()
   id: number;
 
-  /** Descrição da conta (ex.: Cartão de crédito, Carteira). */
   @Column()
   nome: string;
 

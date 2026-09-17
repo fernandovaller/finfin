@@ -169,7 +169,6 @@ export class AuthService {
     private readonly data: DataSource,
   ) {}
 
-  /** Boot: remove sessões expiradas acumuladas no banco. */
   async onModuleInit(): Promise<void> {
     await this.sessoes.delete({ expiraEm: LessThan(new Date().toISOString()) });
   }
@@ -221,7 +220,6 @@ export class AuthService {
       const refresh = await this.sessoes.findOneBy({ token: refreshToken });
       if (refresh) {
         usuarioId ??= refresh.usuarioId;
-        // Derruba o refresh e os access que ele gerou.
         await this.sessoes.delete({ refreshToken });
         await this.sessoes.delete({ token: refreshToken });
       }
@@ -278,7 +276,7 @@ export class AuthService {
     });
   }
 
-  /** Atualiza nome/email/avatar do dono. Avatar = dataURL de imagem ou null (remove). */
+  /** Avatar = dataURL de imagem ou null (remove). */
   async atualizarPerfil(usuarioId: number, body: AtualizarPerfilDto): Promise<{ usuario: UsuarioPublico }> {
     const usuario = await this.usuarios.findOneBy({ id: usuarioId });
     if (!usuario) throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
@@ -294,7 +292,6 @@ export class AuthService {
       usuario.email = email;
     }
     if (body.avatar !== undefined) {
-      // DTO validou dataURL/tamanho; null remove.
       usuario.avatar = body.avatar;
     }
     const salvo = await this.usuarios.save(usuario);
@@ -306,7 +303,6 @@ export class AuthService {
     return { usuario: publico(salvo) };
   }
 
-  /** Troca a senha conferindo a atual; revoga as demais sessões do usuário. */
   async trocarSenha(
     usuarioId: number,
     body: TrocarSenhaDto,
@@ -363,7 +359,6 @@ export class AuthService {
     const usuario = await this.usuarios.findOneBy({ id: usuarioId });
     if (!usuario) throw new UnauthorizedException('Sessão inválida ou expirada — faça login');
     if (body.resendApiKey !== undefined) {
-      // DTO validou tamanho quando há conteúdo; null/'' limpa.
       const chave = body.resendApiKey === null ? '' : String(body.resendApiKey).trim();
       usuario.resendApiKey = chave || null;
       await this.usuarios.save(usuario);
@@ -383,7 +378,6 @@ export class AuthService {
    * puro só existe no link — no banco fica só o hash SHA-256.
    */
   async solicitarRecuperacao(body: RecuperarSenhaDto): Promise<{ ok: true }> {
-    // Limpeza oportunista: pedido expirado não serve para nada.
     await this.recuperacoes.delete({ expiraEm: LessThan(new Date().toISOString()) });
     const email = normalizaEmail(body.email);
     const usuario = email ? await this.usuarios.findOneBy({ email }) : null;
@@ -446,7 +440,6 @@ export class AuthService {
     if (!token) return null;
     const sessao = await this.sessoes.findOneBy({ token });
     if (!sessao) return null;
-    // Refresh nunca autentica rota — só o POST /auth/refresh o aceita, via cookie.
     if ((sessao as Sessao).tipo === 'refresh') return null;
     if (!sessao || new Date(sessao.expiraEm).getTime() < Date.now()) {
       if (sessao) await this.sessoes.delete({ token });
@@ -483,7 +476,6 @@ export class AuthService {
     if (error) throw new Error(error.message);
   }
 
-  /** Emite o par access (15 min) + refresh (7 dias, rotativo). */
   private async abrirSessao(usuario: Usuario): Promise<SessaoCriada> {
     const token = randomBytes(32).toString('hex');
     const refreshToken = randomBytes(32).toString('hex');
@@ -508,7 +500,7 @@ export class AuthService {
         this.despesas.createQueryBuilder().update().set({ usuarioId }).where('usuarioId IS NULL').execute(),
         this.contas.createQueryBuilder().update().set({ usuarioId }).where('usuarioId IS NULL').execute(),
       ]);
-      // Garante seed mesmo em base zerada (onModuleInit não semeia mais).
+      // Garante seed mesmo em base zerada.
       if ((await this.categorias.countBy({ usuarioId })) === 0) {
         await this.categorias.save(SEED_CATEGORIAS.map((c) => ({ ...c, usuarioId })));
       }
@@ -523,7 +515,6 @@ export class AuthService {
     }
   }
 
-  /** Todo usuário novo começa com uma conta principal padrão. */
   private async garantirContaPadrao(usuarioId: number): Promise<void> {
     if ((await this.contas.countBy({ usuarioId })) === 0) {
       await this.contas.save({

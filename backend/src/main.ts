@@ -67,7 +67,6 @@ class FiltroErros implements ExceptionFilter {
 }
 
 async function bootstrap() {
-  // Produção sem COOKIE_SECURE=true aborta antes de escutar (fail-closed).
   assertConfigCookies();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.setGlobalPrefix('api');
@@ -83,8 +82,6 @@ async function bootstrap() {
   app.use(json({ limit: '1mb' }));
   app.use(urlencoded({ extended: true, limit: '1mb' }));
   // Item 1 do SECURITY.md: valida DTOs, remove campo extra e converte tipos.
-  // Só atua onde o controller declara DTO — rotas ainda em `body: any`
-  // passam ilesas até serem migradas (ver src/dto/auth.dto.ts).
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

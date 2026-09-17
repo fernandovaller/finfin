@@ -91,7 +91,6 @@ export function clearToken(): void {
   refreshEmVoo = null;
 }
 
-/** Troca o refresh (cookie HttpOnly) por um access novo, com rotação no servidor. */
 export async function refreshAccess(): Promise<string | null> {
   if (refreshEmVoo) return refreshEmVoo;
   refreshEmVoo = (async () => {

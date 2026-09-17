@@ -109,7 +109,6 @@ export class AppService {
     private readonly auditoria: AuditoriaService,
   ) {}
 
-  /** Todo lançamento pertence a uma conta do próprio usuário. */
   private async assertConta(usuarioId: number, contaId: unknown): Promise<number> {
     if (!Number.isInteger(contaId)) {
       throw new BadRequestException('Campo obrigatório: contaId');
@@ -346,7 +345,6 @@ export class AppService {
     return { mes: ref, totalReceitas, totalDespesas, saldo: totalReceitas - totalDespesas };
   }
 
-  /** Contagem de itens por coleção — alimenta a página de Configurações. */
   async contagem(usuarioId: number): Promise<{
     contas: number;
     receitas: number;
@@ -364,7 +362,6 @@ export class AppService {
     return { contas, receitas, despesas, categorias, formasPagamento };
   }
 
-  /** Exporta tudo do usuário em JSON (contas, lançamentos e catálogo). */
   async exportar(usuarioId: number): Promise<Record<string, unknown>> {
     const [contas, receitas, despesas, categorias, formasPagamento] = await Promise.all([
       this.contas.find({ where: { usuarioId }, order: { id: 'ASC' } }),
@@ -435,7 +432,6 @@ export class AppService {
     throw new BadRequestException('Campo "tipo" deve ser "receitas" ou "despesas"');
   }
 
-  /** Apaga todos os lançamentos do usuário, mantendo contas e catálogo. */
   async apagarLancamentos(usuarioId: number): Promise<{ receitas: number; despesas: number }> {
     const [r, d] = await Promise.all([
       this.receitas.delete({ usuarioId }),
@@ -451,7 +447,6 @@ export class AppService {
     return total;
   }
 
-  /** Apaga lançamentos + contas do usuário, mantendo catálogo e perfil. */
   async apagarTudo(usuarioId: number): Promise<{ receitas: number; despesas: number; contas: number }> {
     const [r, d] = await Promise.all([
       this.receitas.delete({ usuarioId }),

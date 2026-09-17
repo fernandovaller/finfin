@@ -18,7 +18,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let ativo = true;
-    // A memória zera no F5 — o refresh (cookie HttpOnly) reconstrói o access.
     refreshAccess()
       .then((token) => {
         if (!ativo || !token) return null;

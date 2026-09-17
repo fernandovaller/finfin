@@ -54,7 +54,6 @@ function TooltipGrafico({ active, payload, label }: { active?: boolean; payload?
   );
 }
 
-/** Barras agrupadas Receitas x Despesas (Recharts — tooltip + animação). */
 export function GraficoBarrasMensal({ dados }: { dados: PontoMensal[] }) {
   return (
     <div className="h-[240px] w-full">
@@ -89,7 +88,6 @@ function TooltipDonut({ active, payload }: { active?: boolean; payload?: { paylo
   );
 }
 
-/** Donut de despesas por categoria (Recharts — hover + animação). */
 export function GraficoDonut({ fatias }: { fatias: FatiaCategoria[] }) {
   const total = fatias.reduce((s, f) => s + f.total, 0);
 

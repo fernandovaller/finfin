@@ -1,7 +1,5 @@
 import type { ComponentType, ReactNode } from 'react';
 
-/* ---------- formatação ---------- */
-
 export const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export const mesAtual = () => new Date().toISOString().slice(0, 7);
@@ -65,8 +63,6 @@ export function BadgeCategoria({ nome, cor }: { nome: string; cor: string }) {
     </span>
   );
 }
-
-/* ---------- ícones ---------- */
 
 function Svg({ children, className }: { children: ReactNode; className: string }) {
   return (
@@ -166,8 +162,6 @@ export const IconeEngrenagem = ({ className }: { className: string }) => (
   </Svg>
 );
 
-/* ---------- título de página (mesmo ícone do menu + texto) ---------- */
-
 export function TituloPagina({
   Icon,
   children,
@@ -234,8 +228,6 @@ export function Avatar({
     </div>
   );
 }
-
-/* ---------- componentes compartilhados ---------- */
 
 export function MesNav({ mes, onChange }: { mes: string; onChange: (m: string) => void }) {
   return (

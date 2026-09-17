@@ -20,7 +20,6 @@ export class AuditoriaController {
     return this.auditoria.limpar(req.usuario.id, q.antesDe);
   }
 
-  /** Restaura um registro excluído a partir do snapshot do evento. */
   @Post(':id/restaurar')
   restaurar(@Req() req: any, @Param('id', ParseIntPipe) id: number) {
     return this.auditoria.restaurar(req.usuario.id, id);

@@ -47,7 +47,7 @@ export class AuditoriaService {
     private readonly formas: Repository<FormaPagamento>,
   ) {}
 
-  /** Grava um evento. Nunca quebra o fluxo principal — falha silenciosa. */
+  /** Nunca quebra o fluxo principal — falha silenciosa. */
   async registrar(usuarioId: number, evento: RegistrarAuditoria): Promise<void> {
     try {
       const detalhes =
@@ -61,11 +61,9 @@ export class AuditoriaService {
         detalhes,
       });
     } catch {
-      // Auditoria é acessória: erro aqui não pode derrubar o CRUD.
     }
   }
 
-  /** Lista paginada com filtros — sempre escopada por usuário. */
   async listar(
     usuarioId: number,
     filtro: FiltroAuditoria,
@@ -108,7 +106,6 @@ export class AuditoriaService {
     };
   }
 
-  /** Limpeza manual da trilha (opcionalmente só anterior a data). */
   async limpar(usuarioId: number, antesDe?: string): Promise<{ excluidas: number }> {
     const qb = this.auditorias
       .createQueryBuilder()

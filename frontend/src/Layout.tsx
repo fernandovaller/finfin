@@ -90,7 +90,6 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-800 font-sans text-slate-900 dark:text-slate-100 antialiased">
-      {/* Sidebar desktop */}
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col bg-slate-900 lg:flex">
         <div className="flex items-center gap-3 px-5 pb-6 pt-6">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white p-1 shadow-lg shadow-slate-950/40">
@@ -124,7 +123,6 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Drawer mobile */}
       {aberto && (
         <div className="fixed inset-0 z-40 lg:hidden" role="presentation">
           <div className="absolute inset-0 bg-slate-900/50" onClick={() => setAberto(false)} />
@@ -169,7 +167,6 @@ export default function Layout() {
         </div>
       )}
 
-      {/* Header mobile */}
       <header className="sticky top-0 z-30 flex items-center gap-3 bg-slate-900 px-4 py-3 text-white lg:hidden">
         <button
           type="button"

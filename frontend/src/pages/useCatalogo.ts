@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type Categoria, type Conta, type FormaPagamento } from '../api';
 
-/** Catálogo (categorias + formas + contas) compartilhado entre as páginas. */
 export function useCatalogo() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [formas, setFormas] = useState<FormaPagamento[]>([]);

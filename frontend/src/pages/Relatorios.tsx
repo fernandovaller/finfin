@@ -42,7 +42,6 @@ function listaMeses(preset: Preset, mes: string, ano: string, ini: string, fim: 
     const a = ano || mes.slice(0, 4);
     return Array.from({ length: 12 }, (_, i) => `${a}-${String(i + 1).padStart(2, '0')}`);
   }
-  // intervalo
   if (!ini || !fim) return [mes];
   const [a, b] = ini <= fim ? [ini, fim] : [fim, ini];
   const out: string[] = [];
@@ -75,7 +74,6 @@ export default function Relatorios() {
   const [sincronizadoEm, setSincronizadoEm] = useState<Date | null>(null);
   const { corDe, contas, contaPorId, nomesPorTipo, formas } = useCatalogo();
 
-  // filtros
   const [preset, setPreset] = useState<Preset>('mes');
   const [ano, setAno] = useState(() => mesAtual().slice(0, 4));
   const [ini, setIni] = useState(() => deslocarMes(mesAtual(), -2));

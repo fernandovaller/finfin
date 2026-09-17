@@ -51,7 +51,6 @@ function plural(n: number): string {
   return `${n} lançamento${n === 1 ? '' : 's'}`;
 }
 
-/** Nome com teto: evita bloat do banco e DoS de string gigante. */
 function nomeValido(valor: unknown, campo: string, max = 120): string {
   const nome = typeof valor === 'string' ? valor.trim() : '';
   if (!nome) throw new BadRequestException(`Campo obrigatório: ${campo}`);
@@ -338,7 +337,6 @@ export class CatalogoService {
     }
   }
 
-  /** Garante uma única conta principal por usuário. */
   private async marcarPrincipal(usuarioId: number, id: number): Promise<void> {
     await this.contas
       .createQueryBuilder()

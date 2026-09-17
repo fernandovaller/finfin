@@ -22,8 +22,7 @@ interface Registro {
 
 /**
  * Guard global de taxa: N requisições por minuto, por IP e rota, contadas em
- * memória (app de instância única). Substitui o @nestjs/throttler, que não
- * tem peer compatível com @nestjs 12.
+ * memória (instância única).
  */
 @Injectable()
 export class LimiteGuard implements CanActivate {
