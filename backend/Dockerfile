@@ -21,7 +21,11 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm ci --omit=dev && npm rebuild better-sqlite3
 COPY --from=build /app/dist ./dist
+COPY entrypoint.sh ./
+RUN chmod +x entrypoint.sh && mkdir -p data && chown -R node:node /app
 
-RUN mkdir -p data
 EXPOSE 3001
+# Entrypoint ajusta o dono do volume e derruba para o user `node`
+# (o sqlite guarda dados sensíveis — processo não roda como root).
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["node", "dist/main"]

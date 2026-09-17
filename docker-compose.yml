@@ -1,23 +1,49 @@
 services:
   backend:
     build: ./backend
-    ports:
-      - "${BACKEND_PORT:-3001}:3001"
+    # Sem `ports`: no deploy o backend só existe na rede interna (via nginx).
+    # Dev local expõe via docker-compose.override.yml (carregado sozinho).
     environment:
       # Dentro do contêiner o backend sempre escuta na 3001; a variável da
       # esquerda (host) é a que muda pelo .env.
       - PORT=3001
+      # Repasse do .env da raiz (sem isso o container ignora tudo abaixo).
+      # Vazio = comportamento padrão (seguro); ver .env.example.
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - EMAIL_REMETENTE=${EMAIL_REMETENTE:-}
+      - FRONTEND_URL=${FRONTEND_URL:-}
+      - COOKIE_SECURE=${COOKIE_SECURE:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
+      # Atrás do nginx o IP real vem via X-Forwarded-For (rate limit por cliente).
+      - CONFIAR_PROXY=true
     volumes:
       - finfin-data:/app/data
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3001/api/auth/eu').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   frontend:
     build: ./frontend
     ports:
       - "${FRONTEND_PORT:-3000}:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
 volumes:
   finfin-data:

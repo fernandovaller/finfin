@@ -1,5 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
 import { json, urlencoded } from 'express';
@@ -64,7 +65,7 @@ class FiltroErros implements ExceptionFilter {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.setGlobalPrefix('api');
   app.use(helmet());
   // Teto do corpo: avatar (500 KB) + lote OFX (2000 itens) cabem; gigante não.
@@ -82,9 +83,11 @@ async function bootstrap() {
   );
   app.useGlobalFilters(new FiltroErros());
   app.use(cookieParser());
-  // Em produção atrás de um proxy (nginx): descomente para o throttler enxergar
-  // o IP real via X-Forwarded-For — senão todo cliente aparece como o IP do proxy.
-  // app.set('trust proxy', 1);
+  // Atrás do nginx o IP real vem via X-Forwarded-For — sem isso o rate limit
+  // enxerga todo mundo como o IP do proxy (teto compartilhado). Ligado via
+  // CONFIAR_PROXY=true (o compose já liga); fora de proxy, manter desligado
+  // para ninguém forjar IP via header.
+  if (process.env.CONFIAR_PROXY === 'true') app.set('trust proxy', 1);
   app.enableCors({
     origin: (origem, callback) => callback(null, !origem || ORIGENS_PERMITIDAS.has(origem)),
     // O refresh viaja em cookie HttpOnly — o navegador só o envia com credentials.

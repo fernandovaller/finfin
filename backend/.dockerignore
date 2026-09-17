@@ -1,5 +1,14 @@
 node_modules
 dist
 npm-debug.log*
-data/*.sqlite
-data/*.sqlite-journal
+# Segredos e dados locais nunca entram na imagem.
+.env
+.env.local
+data/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3
+*.db
+*.ofx

@@ -1,0 +1,7 @@
+# Dev local: expõe o backend no host para debug direto da API.
+# Carregado automaticamente junto do docker-compose.yml.
+# Produção (só rede interna, via nginx): docker compose -f docker-compose.yml up -d
+services:
+  backend:
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
