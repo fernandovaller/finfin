@@ -636,6 +636,7 @@ export class AppService {
       }
       let nCats = 0;
       for (const item of backup.categorias ?? []) {
+        // Pipe já validou; guardas aqui são defesa em profundidade.
         const nome = item?.nome?.trim?.();
         const tipo = item?.tipo;
         if (!nome || (tipo !== 'receita' && tipo !== 'despesa')) {
@@ -643,7 +644,7 @@ export class AppService {
         }
         const existe = await tx.findOneBy(Categoria, { usuarioId, nome, tipo });
         if (!existe) {
-          await tx.save(Categoria, { nome, tipo, cor: item?.cor ?? 'slate', usuarioId });
+          await tx.save(Categoria, { nome, tipo, cor: item.cor ?? 'slate', usuarioId });
           nCats++;
         }
       }
@@ -666,22 +667,22 @@ export class AppService {
         if (!nome) throw new BadRequestException('Conta inválida no backup (sem nome)');
         const existe = await tx.findOneBy(Conta, { usuarioId, nome });
         if (existe) {
-          if (typeof item?.id === 'number') mapaContas.set(item.id, existe.id);
+          if (typeof item.id === 'number') mapaContas.set(item.id, existe.id);
         } else {
-          const saldoInicial = Number(item?.saldoInicial) || 0;
-          let principal = item?.principal === true;
+          const saldoInicial = typeof item.saldoInicial === 'number' ? item.saldoInicial : 0;
+          let principal = item.principal === true;
           if (principal && (await tx.countBy(Conta, { usuarioId, principal: true })) > 0) {
             principal = false;
           }
           const nova = await tx.save(Conta, {
             nome,
             saldoInicial,
-            nota: typeof item?.nota === 'string' ? item.nota : '',
-            icone: typeof item?.icone === 'string' ? item.icone : '',
+            nota: typeof item.nota === 'string' ? item.nota : '',
+            icone: typeof item.icone === 'string' ? item.icone : '',
             principal,
             usuarioId,
           });
-          if (typeof item?.id === 'number') mapaContas.set(item.id, nova.id);
+          if (typeof item.id === 'number') mapaContas.set(item.id, nova.id);
           nContas++;
         }
       }
@@ -704,9 +705,9 @@ export class AppService {
           valor: item.valor,
           categoria: item.categoria,
           origem: item.origem,
-          formaPagamento: item?.formaPagamento ?? '',
-          contaId: contaDe(item?.contaId, i, 'Receita'),
-          nota: item?.nota ?? '',
+          formaPagamento: item.formaPagamento ?? '',
+          contaId: contaDe(item.contaId, i, 'Receita'),
+          nota: item.nota ?? '',
           usuarioId,
         });
         nReceitas++;
@@ -720,13 +721,13 @@ export class AppService {
           data: item.data,
           valor: item.valor,
           categoria: item.categoria,
-          descricao: item?.descricao ?? '',
-          formaPagamento: item?.formaPagamento ?? '',
-          contaId: contaDe(item?.contaId, i, 'Despesa'),
-          nota: item?.nota ?? '',
-          grupoParcela: item?.grupoParcela ?? null,
-          parcelaAtual: item?.parcelaAtual ?? null,
-          parcelaTotal: item?.parcelaTotal ?? null,
+          descricao: item.descricao ?? '',
+          formaPagamento: item.formaPagamento ?? '',
+          contaId: contaDe(item.contaId, i, 'Despesa'),
+          nota: item.nota ?? '',
+          grupoParcela: item.grupoParcela ?? null,
+          parcelaAtual: item.parcelaAtual ?? null,
+          parcelaTotal: item.parcelaTotal ?? null,
           usuarioId,
         });
         nDespesas++;
