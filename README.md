@@ -14,26 +14,32 @@ Backend NestJS + frontend React, ambos em TypeScript.
 | Camada   | Tecnologia                                                        |
 | -------- | ----------------------------------------------------------------- |
 | Backend  | NestJS 10 + TypeScript + TypeORM + SQLite (`better-sqlite3`)      |
-| Frontend | React 19 + Vite 6 + TypeScript + Tailwind CSS v4 + React Router 7 |
+| Frontend | React 19 + Vite 6 + TypeScript + Tailwind CSS v4 + React Router 7 + i18next |
 | Banco    | SQLite em arquivo (`backend/data/finfin.sqlite`, criado no boot)  |
 
 ## Funcionalidades
 
-- **Home** — resumo do mês (receitas, despesas, saldo), saldos por conta e gráficos
-- **Lançamentos** — CRUD de receitas/despesas com máscara BRL; despesa parcela em até 21x
-- **Relatórios** — totais do mês, despesas por categoria e por forma de pagamento, últimos 6 meses
-- **Contas** — CRUD com saldo inicial e conta principal; exclusão bloqueada se estiver em uso
+- **Home** — resumo do mês (receitas, despesas, saldo), saldos por conta e gráficos,
+  com filtro por conta (`?contaId=`)
+- **Lançamentos** — CRUD de receitas/despesas com máscara BRL e filtro por mês/conta;
+  despesa parcela em até 21x
+- **Relatórios** — totais do mês, despesas por categoria e por forma de pagamento, últimos 6 meses,
+  com filtros por conta, categoria, forma, valor e texto
+- **Contas** — CRUD com saldo inicial (máscara de centavos, aceita negativo), ícone, nota e
+  conta principal; exclusão bloqueada se estiver em uso
 - **Categorias** — CRUD com tipo (receita/despesa) e cor; exclusão bloqueada se estiver em uso
 - **Formas de pagamento** — CRUD (Dinheiro, PIX, cartões…); exclusão bloqueada se estiver em uso
-- **Extrato OFX** — importa lançamentos de arquivo `.ofx` com anti-duplicidade por FITID
+- **Extrato OFX** — importa lançamentos de arquivo `.ofx` com conta destino e anti-duplicidade por FITID
 - **Backup** — exporta JSON completo ou CSV (receitas/despesas) e restaura backup JSON
 - **Auditoria** — trilha de CRUD + login/import/export com filtros (módulo, ação, descrição,
-  período), paginação e **restauração de itens excluídos**
+  período), paginação (`?pagina=&porPagina=`, até 100/pág.) e **restauração de itens excluídos**
 - **Demonstração** — gera 3 contas demo com 6 meses de lançamentos em todas as categorias;
   remove só o demo sem tocar nos dados reais
-- **Conta** — cadastro/login com sessões de 7 dias, perfil com avatar, troca de senha e
+- **Conta** — cadastro/login com access de 15 min (só em memória) + refresh de 7 dias
+  em cookie HttpOnly com rotação, perfil com avatar, troca de senha e
   recuperação por e-mail (Resend)
 - **Aparência** — tema claro/escuro/sistema e largura fluida/fixa
+- **Idioma** — português (pt-BR) e inglês, com troca em Configurações → Geral (persiste em `localStorage`)
 
 ## Como rodar
 
@@ -100,13 +106,13 @@ Base: `http://localhost:3001/api`. Rotas protegidas exigem `Authorization: Beare
 
 | Método          | Rota                          | Descrição                              |
 | --------------- | ----------------------------- | -------------------------------------- |
-| `GET` / `POST`  | `/receitas`                   | lista / cria receitas                  |
-| `PUT` / `DELETE`| `/receitas/:id`               | edita / exclui receita                 |
-| `GET` / `POST`  | `/despesas`                   | lista / cria despesas (até 21 parcelas)|
+| `GET` / `POST`  | `/receitas[?contaId=]`        | lista (com filtro) / cria receitas     |
+| `PUT` / `DELETE`| `/receitas/:id`               | edita / exclui receita (204)           |
+| `GET` / `POST`  | `/despesas[?contaId=]`        | lista (com filtro) / cria despesas (até 21 parcelas) |
 | `PUT` / `DELETE`| `/despesas/:id`               | edita / exclui (`?escopo=grupo` p/ parceladas) |
-| `GET`           | `/resumo?mes=YYYY-MM`         | totais e saldo do mês                  |
+| `GET`           | `/resumo?mes=YYYY-MM[&contaId=]` | totais e saldo do mês (geral ou por conta) |
 | `GET`           | `/contagem`                   | quantidades por coleção                |
-| `GET`           | `/exportar`, `/exportar/csv?tipo=` | backup JSON / CSV                 |
+| `GET`           | `/exportar`, `/exportar/csv?tipo=` | backup JSON / CSV (`tipo=receitas` ou `despesas`) |
 | `POST`          | `/importar`, `/importar/ofx`  | restaura backup / importa extrato OFX  |
 | `DELETE`        | `/dados/lancamentos`, `/dados/tudo` | apagão (zona de perigo)          |
 
@@ -123,11 +129,12 @@ Base: `http://localhost:3001/api`. Rotas protegidas exigem `Authorization: Beare
 | Método          | Rota                                    | Descrição                              |
 | --------------- | --------------------------------------- | -------------------------------------- |
 | `POST` / `GET`  | `/auth/cadastro`, `/auth/login`, `/auth/eu` | cria conta / entra / sessão atual |
-| `POST`          | `/auth/logout`                          | encerra a sessão                       |
+| `POST`          | `/auth/refresh`                         | renova o access (15 min) via cookie HttpOnly (rotação do refresh) |
+| `POST`          | `/auth/logout`                          | encerra access + refresh (204)         |
 | `PUT`           | `/auth/perfil`, `/auth/senha`           | atualiza perfil / troca a senha        |
 | `GET` / `PUT`   | `/auth/integracoes`                     | status / salva chave do Resend         |
 | `POST`          | `/auth/recuperar-senha`, `/auth/redefinir-senha` | recuperação por e-mail     |
-| `GET`           | `/auditoria?modulo=&acao=&descricao=&dataInicio=&dataFim=&pagina=` | trilha paginada |
+| `GET`           | `/auditoria?modulo=&acao=&descricao=&dataInicio=&dataFim=&pagina=&porPagina=` | trilha paginada |
 | `POST`          | `/auditoria/:id/restaurar`              | restaura item excluído                 |
 | `DELETE`        | `/auditoria[?antesDe=YYYY-MM-DD]`       | limpa a trilha                         |
 | `GET` / `POST` / `DELETE` | `/dados/demonstracao`        | status / gera / remove demo            |
@@ -163,6 +170,11 @@ finfin/
   estão no `.gitignore` e nunca devem ser commitados).
 - O schema é dono das **migrations** (aplicadas no boot) — nunca reative `synchronize`.
 - Rode apenas uma instância do backend por vez sobre o mesmo arquivo `.sqlite`.
+- Auth: o access (Bearer, 15 min) vive só em memória no frontend; o refresh (7 dias)
+  vai em cookie HttpOnly restrito a `/api/auth`. Em produção o cookie exige https
+  (`COOKIE_SECURE=true`, com fail-fast no boot).
+- Rate limit por IP: cadastro/login 10/min, refresh 30/min, recuperação/redefinição 5/min.
+  Bodies e queries são validados com DTOs (`400` com mensagens em pt-BR).
 
 ## Licença
 
