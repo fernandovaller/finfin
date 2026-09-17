@@ -16,6 +16,35 @@ const ICONES = ['', '💰', '🏦', '💳', '💵', '📈', '🐷', '✈️', '�
 
 const vazio = { nome: '', saldoInicial: '', nota: '', icone: '', principal: false };
 
+/** Máscara de moeda: dígitos digitados viram centavos (ex.: "25000" → "250,00"). Aceita "-" inicial (saldo devedor). */
+function mascaraMoeda(digitos: string): string {
+  if (digitos === '' || digitos === '-') return '';
+  const negativo = digitos.startsWith('-');
+  const soDigitos = negativo ? digitos.slice(1) : digitos;
+  if (soDigitos === '') return '';
+  const formatado = (Number(soDigitos) / 100).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return negativo ? `-${formatado}` : formatado;
+}
+
+/** Do input formatado de volta para dígitos (preserva "-" inicial, teto de 12 dígitos). */
+function textoParaDigitos(bruto: string): string {
+  const negativo = bruto.trim().startsWith('-');
+  const digitos = bruto.replace(/\D/g, '').slice(0, 12);
+  if (digitos === '') return negativo ? '-' : '';
+  return (negativo ? '-' : '') + digitos;
+}
+
+/** Dígitos em centavos → número (vazio vira 0). */
+function digitosParaNumero(digitos: string): number {
+  if (digitos === '' || digitos === '-') return 0;
+  const negativo = digitos.startsWith('-');
+  const valor = Number(negativo ? digitos.slice(1) : digitos) / 100;
+  return negativo ? -valor : valor;
+}
+
 export default function Contas() {
   const [itens, setItens] = useState<Conta[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -26,6 +55,7 @@ export default function Contas() {
   const [modalNovo, setModalNovo] = useState(false);
   const [form, setForm] = useState(vazio);
   const [editando, setEditando] = useState<Conta | null>(null);
+  const [saldoEdicao, setSaldoEdicao] = useState('');
   const [excluindo, setExcluindo] = useState<Conta | null>(null);
 
   async function recarregar() {
@@ -50,6 +80,11 @@ export default function Contas() {
     setModalNovo(true);
   }
 
+  function abrirEdicao(c: Conta) {
+    setEditando(c);
+    setSaldoEdicao(String(Math.round(c.saldoInicial * 100)));
+  }
+
   async function adicionar(e: React.FormEvent) {
     e.preventDefault();
     setSalvando(true);
@@ -59,7 +94,7 @@ export default function Contas() {
         method: 'POST',
         body: JSON.stringify({
           nome: form.nome,
-          saldoInicial: Number(form.saldoInicial) || 0,
+          saldoInicial: digitosParaNumero(form.saldoInicial),
           nota: form.nota,
           icone: form.icone,
           principal: form.principal,
@@ -85,7 +120,7 @@ export default function Contas() {
         method: 'PUT',
         body: JSON.stringify({
           nome: editando.nome,
-          saldoInicial: editando.saldoInicial,
+          saldoInicial: digitosParaNumero(saldoEdicao),
           nota: editando.nota ?? '',
           icone: editando.icone ?? '',
           principal: editando.principal ?? false,
@@ -197,7 +232,7 @@ export default function Contas() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setEditando(c)}
+                  onClick={() => abrirEdicao(c)}
                   aria-label={`Editar ${c.nome}`}
                   title="Editar"
                   className="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-200"
@@ -239,10 +274,10 @@ export default function Contas() {
               <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
                 Saldo inicial (R$)
                 <input
-                  type="number"
-                  step="0.01"
-                  value={form.saldoInicial}
-                  onChange={(e) => setForm({ ...form, saldoInicial: e.target.value })}
+                  type="text"
+                  inputMode="numeric"
+                  value={mascaraMoeda(form.saldoInicial)}
+                  onChange={(e) => setForm({ ...form, saldoInicial: textoParaDigitos(e.target.value) })}
                   placeholder="0,00"
                   className={`${inputCls} tabular-nums`}
                 />
@@ -302,12 +337,11 @@ export default function Contas() {
               <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">
                 Saldo inicial (R$)
                 <input
-                  type="number"
-                  step="0.01"
-                  value={editando.saldoInicial}
-                  onChange={(e) =>
-                    setEditando({ ...editando, saldoInicial: Number(e.target.value) || 0 })
-                  }
+                  type="text"
+                  inputMode="numeric"
+                  value={mascaraMoeda(saldoEdicao)}
+                  onChange={(e) => setSaldoEdicao(textoParaDigitos(e.target.value))}
+                  placeholder="0,00"
                   className={`${inputCls} tabular-nums`}
                 />
               </label>
