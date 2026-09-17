@@ -22,7 +22,7 @@ import { CORES_CATEGORIA } from '../categoria.entity';
 import { IsDataValida } from './data-valida';
 
 /**
- * DTOs de lançamentos, OFX e backup (item 1 do SECURITY.md).
+ * DTOs de lançamentos, OFX e backup.
  *
  * Campos `origem` (em despesa) e `parcelas` (em receita) existem só por
  * compatibilidade: o `LancamentoForm` espalha `...v` e os envia junto.

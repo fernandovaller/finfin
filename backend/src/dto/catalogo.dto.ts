@@ -13,7 +13,7 @@ import {
 import { CORES_CATEGORIA } from '../categoria.entity';
 
 /**
- * DTOs do catálogo (item 1 do SECURITY.md).
+ * DTOs do catálogo.
  *
  * Update é parcial (`@IsOptional` em tudo): o frontend manda só o que
  * mudou — menos `tipo` em categoria, que o service ignora (não atualiza).

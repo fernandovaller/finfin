@@ -81,7 +81,7 @@ async function bootstrap() {
   // Teto do corpo: avatar (500 KB) + lote OFX (2000 itens) cabem; gigante não.
   app.use(json({ limit: '1mb' }));
   app.use(urlencoded({ extended: true, limit: '1mb' }));
-  // Item 1 do SECURITY.md: valida DTOs, remove campo extra e converte tipos.
+  // Valida DTOs, remove campo extra e converte tipos.
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

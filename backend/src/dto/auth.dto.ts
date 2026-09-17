@@ -10,7 +10,7 @@ import {
 } from 'class-validator';
 
 /**
- * DTOs do auth (item 1 do SECURITY.md).
+ * DTOs do auth.
  *
  * Convenções (valem para todos os DTOs do projeto):
  * - `@Transform` normaliza (trim/lower) antes de validar;

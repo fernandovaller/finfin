@@ -3,7 +3,7 @@ import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-va
 import { IsDataValida, IsMesValido } from './data-valida';
 
 /**
- * DTOs de query string (item 1 do SECURITY.md).
+ * DTOs de query string.
  *
  * Tudo chega como string na URL — os `@Transform` convertem antes de
  * validar (`transform: true` no pipe global). `''` vira `undefined`
