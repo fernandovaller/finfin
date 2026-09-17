@@ -2,9 +2,34 @@
 
 ## Boot (`backend/src/main.ts`)
 
-- Portas: `BACKEND_PORT | PORT → 3001`, `FRONTEND_PORT → 3000` (`:14-16`).
-- CORS só `localhost/127.0.0.1:<FRONTEND_PORT>` (`:19-22,:31-33`); `helmet()` (`:27`);
-  prefixo global `api` (`:26`); `chmod 0600` no sqlite (`:37`).
+- Portas: `BACKEND_PORT | PORT → 3001`, `FRONTEND_PORT → 3000` (`:20-22`).
+  Escuta em `0.0.0.0` (Docker, `:111`).
+- `assertConfigCookies()` no boot: produção sem `COOKIE_SECURE=true` aborta.
+  `cookieParser()` ligado; refresh em cookie HttpOnly.
+- Toda resposta da API sai com `Cache-Control: no-store` + `Pragma: no-cache` (`:76-80`).
+- Corpo JSON/urlencoded limitado a `1mb` (`:82-83`); gigante → 413
+  `Corpo grande demais (máximo 1 MB)` via `FiltroErros` (`:38-67`).
+  `HttpException` repassa mensagem curada sem stack/path; resto → 500 genérico.
+- `ValidationPipe` global: `whitelist + forbidNonWhitelisted + transform`
+  (`:85-91`) — campo extra → 400, query string convertida antes de validar.
+- CORS: base `localhost/127.0.0.1:<FRONTEND_PORT>` + extras `CORS_ORIGINS`
+  (`:25-35`); `credentials: true` (`:99-103`); `helmet()` (`:73`);
+  prefixo global `api` (`:72`); `chmod 0600` no sqlite (`:106-110`).
+- `trust proxy` só com `CONFIAR_PROXY=true` (rate-limit por IP real atrás do nginx).
+
+## Docker / compose
+
+- Imagem backend roda via `entrypoint.sh`: se root, `chown /app/data` e derruba
+  privilégio para `node` (`gosu/runuser/su/setpriv`, fail-closed); `data/` com
+  `chown node:node` no build.
+- `docker-compose.yml` (prod): backend sem `ports` (rede interna via nginx do
+  frontend); env repassadas `RESEND_API_KEY/EMAIL_REMETENTE/FRONTEND_URL/
+  COOKIE_SECURE/CORS_ORIGINS` + `CONFIAR_PROXY=true`; `security_opt:
+  no-new-privileges:true`; healthcheck backend `GET /api/auth/eu`, frontend `wget /`;
+  `depends_on: service_healthy`. `docker-compose.override.yml` (dev local) reexpõe
+  `backend ${BACKEND_PORT:-3001}:3001`.
+- `FRONTEND_URL` base do link de recuperação; `frontend/nginx.conf` proxy
+  `/api/` → `backend:3001` com `Cache-Control: no-store`.
 
 ## Módulo (`app.module.ts:29-51`)
 

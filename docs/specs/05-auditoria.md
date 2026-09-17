@@ -16,9 +16,11 @@ Controller `@Controller('auditoria')` com `AuthGuard` (`auditoria.controller.ts:
 ## Rotas
 
 - `GET /auditoria?modulo=&acao=&descricao=&dataInicio=&dataFim=&pagina=&porPagina=`
-  (`auditoria.controller.ts:11-20` → `service.listar`).
-- `DELETE /auditoria[?antesDe=YYYY-MM-DD]` (`:34`) → apaga tudo ou só o anterior
-  (`service.limpar`).
+  (`auditoria.controller.ts:11-20` → `service.listar`, query `AuditoriaQueryDto`).
+  Filtro inválido (data fora de `YYYY-MM-DD` calendário real, `pagina < 1`,
+  `porPagina` fora de 1–100) → 400.
+- `DELETE /auditoria[?antesDe=YYYY-MM-DD]` (`:34`, `LimparAuditoriaQueryDto`) → apaga tudo ou só o anterior
+  (`service.limpar`). `antesDe` inválido → 400 (não mais ignorado).
 - `POST /auditoria/:id/restaurar` (`:40`, `ParseIntPipe`) → recria o item excluído
   a partir do snapshot.
 
@@ -32,7 +34,7 @@ Controller `@Controller('auditoria')` com `AuthGuard` (`auditoria.controller.ts:
 ## Limpeza (`:112-122`)
 
 `DELETE WHERE usuarioId`; se `antesDe` válido, `AND criadoEm < corte 00:00`.
-Retorna `{excluidas}`. Formato inválido é ignorado (apaga tudo do usuário).
+Retorna `{excluidas}`.
 
 ## Restauração (`:131-254`)
 

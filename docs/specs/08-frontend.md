@@ -28,6 +28,14 @@ HashRouter` (`:37-38`), `StrictMode` (`:36`).
 - `sair`: `apiLogout()` + `clearToken()` em `finally` + `setUsuario(null)`.
   `sincronizar(u)` atualiza após PUT perfil/senha. Layout: `onSair → sair() + navegar('/login')` (`Layout.tsx:86-89`).
 
+## Idioma (i18n)
+
+`frontend/src/i18n/` com `react-i18next`: resources `pt-BR/en` (556 chaves cada),
+`fallbackLng pt-BR`, idioma em `localStorage finfin_idioma` (`lerIdioma/salvarIdioma`).
+Troca em Configurações → Geral. `localeIntl()` resolve `pt-BR/en-US` para datas e
+números localizados (máscara de moeda, relatórios/PDF); `BRL` segue fixo em pt-BR.
+Todas as páginas/componentes usam `t()` — sem string nova fora dos locales.
+
 ## Shell (`Layout.tsx`)
 
 Grupos: Principal (`/`, `/lancamentos`, `/relatorios`), Cadastros (`/categorias`,
@@ -69,7 +77,7 @@ Helpers: `nomesPorTipo`, `corDe → cor | 'slate'`, `contaPorId → nome | ''`,
   nota, icone, principal}`; `DELETE`. Ícones emoji, fallback 💰, badge Principal.
 - `/formas-pagamento` `FormasPagamento.tsx:14-252`: CRUD só `{nome}`.
 - `/configuracoes` `Configuracoes.tsx:52-727`: 4 abas (geral, backup, email, perigo).
-  Geral: `GET /api/contagem` + aparência. Backup: demo (`POST|DELETE
+  Geral: `GET /api/contagem` + aparência + idioma (`salvarIdioma`, pt-BR/en). Backup: demo (`POST|DELETE
   /api/dados/demonstracao`), export JSON (`GET /api/exportar` → `finfin-backup-*.json`)
   e CSV (`GET /api/exportar/csv?tipo=` + BOM), import (`POST /api/importar
   {modo: mesclar|substituir, backup}` + checkbox), `POST /api/restaurar`. E-mail:

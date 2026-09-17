@@ -3,6 +3,9 @@
 Todo `CatalogoController` usa `AuthGuard` na classe
 (`backend/src/catalogo.controller.ts:6`). DELETEs retornam 204 (`:25,:46,:67`).
 Exclusão em uso retorna 409. Toda mutação é auditada.
+Validação de forma nos DTOs (`dto/catalogo.dto.ts`, `dto/consulta.dto.ts`):
+bodies com campo extra ou tamanho/tipo inválido → 400; `GET /categorias?tipo=`
+com valor ≠ `receita|despesa` → 400. Updates são parciais (`@IsOptional` em tudo).
 
 ## Rotas
 
@@ -17,7 +20,7 @@ Exclusão em uso retorna 409. Toda mutação é auditada.
 
 - Seeds: 13 (`SEED_CATEGORIAS`, 10 despesa + 3 receita, `:16-30`). Cores válidas:
   `sky, violet, amber, pink, emerald, teal, rose, slate` (`categoria.entity.ts:5-14`).
-- Create (`:70-93`): `nome` trim obrigatório, `tipo` receita|despesa, `cor` no enum,
+- Create (`:70-93`): `nome` trim 1–120 obrigatório, `tipo` receita|despesa, `cor` no enum,
   senão 400. Unique `(usuarioId, nome, tipo)` → 409.
 - Update (`:96-137`): 404 se não é do dono. `nome/cor` opcionais, vazio/inválida 400.
   Renomear propaga via `UPDATE SET categoria WHERE usuarioId AND categoria=antigo`
@@ -28,7 +31,7 @@ Exclusão em uso retorna 409. Toda mutação é auditada.
 ## Formas de pagamento
 
 - Seeds: 7 (`SEED_FORMAS`, `:32-40`). Sem filtro por tipo.
-- Create (`:163-178`): `nome` obrigatório, senão 400. Unique `(usuarioId, nome)` → 409.
+- Create (`:163-178`): `nome` 1–120 obrigatório, senão 400. Unique `(usuarioId, nome)` → 409.
 - Update (`:181-223`): 404 se não é do dono. Renomear propaga para receitas+despesas
   (`:194-211`). Conflito → 409.
 - Delete (`:225-246`): soma `countBy formaPagamento` em receitas+despesas (`:228-231`);
@@ -36,8 +39,8 @@ Exclusão em uso retorna 409. Toda mutação é auditada.
 
 ## Contas (`:252-352`)
 
-- Create (`:252-278`): `nome` obrigatório; `saldoInicial` number (`NaN` 400);
-  `nota/icone` string; `principal === true` marca principal. Unique
+- Create (`:252-278`): `nome` 1–120 obrigatório; `saldoInicial` number finito com
+  `|x| ≤ 1e12` (senão 400); `nota ≤ 2000` string; `icone ≤ 20` string; `principal === true` marca principal. Unique
   `(usuarioId, nome)` → 409. `marcarPrincipal` desmarca as outras
   (`UPDATE principal=false WHERE usuarioId AND id != id`, `:322-329`).
 - Update (`:280-319`): mesma validação por campo + 404; nome duplicado 409.

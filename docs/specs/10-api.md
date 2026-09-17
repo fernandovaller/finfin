@@ -5,6 +5,10 @@ Base `http://localhost:3001/api`. Protegidas exigem `Authorization: Bearer <toke
 HttpOnly `finfin_refresh` — `POST /auth/refresh` o rotaciona; frontend envia
 `credentials: include`.
 
+Validação: pipe global `whitelist + forbidNonWhitelisted` — campo extra ou
+query/body fora do formato → 400 com mensagem pt-BR. Corpo acima de 1 MB → 413.
+Toda resposta da API sai com `Cache-Control: no-store`.
+
 ## Lançamentos e dados
 
 | Método | Rota | Descrição |

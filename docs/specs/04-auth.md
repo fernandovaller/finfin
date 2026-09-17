@@ -14,9 +14,14 @@ Base `auth.controller.ts` = `@Controller('auth')` (`:6`).
   era do localStorage) vale como access até expirar.
 - `onModuleInit` limpa expiradas (`:153-155`).
 - `donoDoToken`: parse Bearer; refresh nunca autentica rota; expirado → deleta + `null`.
-- `refreshSessao`: valida o refresh do cookie, rotaciona (apaga refresh antigo + seus
-  access) e emite par novo. `logout(access?, refresh?)`: apaga o access, o refresh e
-  os access dele + limpa o cookie.
+- `refreshSessao`: valida o refresh do cookie dentro de transação (`DataSource`):
+  consome o refresh antigo antes de emitir o par novo e aborta com 401 quando
+  `affected === 0` (anti-replay de refresh concorrente). Apaga refresh antigo + seus
+  access e emite par novo no mesmo commit. `logout(access?, refresh?)`: apaga o access,
+  o refresh e os access dele + limpa o cookie.
+- Cookie: `finfin_refresh`, `HttpOnly`, `Path=/api/auth`, `SameSite=Strict`,
+  `Secure` em produção (sempre) ou com `COOKIE_SECURE=true` em dev. Boot com
+  `assertConfigCookies()`: produção sem `COOKIE_SECURE=true` aborta (fail-fast).
 - `AuthGuard` (`auth.guard.ts:5-14`): sem dono válido → 401 `Sessão inválida ou expirada`.
 
 ## Rotas
@@ -35,20 +40,21 @@ Base `auth.controller.ts` = `@Controller('auth')` (`:6`).
 | `POST /auth/recuperar-senha` (`:65`) | pública, `@Limite(5)` | `{email}` → sempre `{ok: true}` |
 | `POST /auth/redefinir-senha` (`:72`) | pública, `@Limite(5)` | `{token, novaSenha}` → `{ok: true}` |
 
-## Regras
+## Regras (forma nos DTOs `dto/auth.dto.ts`, negócio no service)
 
-- Cadastro (`:157-179`): `nome` obrigatório; `email` normalizado lower + regex 400
-  (`:104-108`); `senha` 8–128 (teto anti-DoS scrypt, `:166-168`); duplicado 409.
-- `adotarOuSemear` (`:446-469`): se 1º usuário do sistema, adota órfãos
-  (`usuarioId IS NULL` nas 5 tabelas, `:450-455`); senão seed 13 categorias + 7 formas
-  + `Conta Principal {saldo 0, ícone 💰, principal: true}` (`:472-483`).
-- Login (`:181-198`): sem `email+senha` 400; usuário/senha inválidos 401.
-- Perfil (`:214-255`): 401 sem usuário; `nome` não-vazio, `email` regex + único (409),
+- Cadastro: `nome` trim 1–120; `email` normalizado lower + formato; `senha` 8–128
+  (teto anti-DoS scrypt); duplicado 409.
+- `adotarOuSemear`: se 1º usuário do sistema, adota órfãos
+  (`usuarioId IS NULL` nas 5 tabelas); senão seed 13 categorias + 7 formas
+  + `Conta Principal {saldo 0, ícone 💰, principal: true}` (`garantirContaPadrao`).
+- Login: `{email, senha}`; usuário/senha inválidos 401. Audita `auth/login`.
+- Perfil: 401 sem usuário; `nome` 1–120, `email` formato + único (409),
   `avatar` null ou `data:image/(png|jpg|gif|webp);base64` com `≤ 500k chars` (~375KB),
-  senão 400 (`:236-244`). Audita `auth/atualizar`.
-- Senha (`:258-288`): `senhaAtual` errada 401; `novaSenha` 8–128 senão 400; re-hash +
+  senão 400. Audita `auth/atualizar`.
+- Senha: `senhaAtual` errada 401; `novaSenha` 8–128 senão 400; re-hash +
   `delete({usuarioId, token: Not(tokenAtual)})` — mantém a atual, derruba o resto.
-- Integrações (`:294-331`): `obter` retorna `{email: {configurado, origem: conta|ambiente|null, mascarada}}`;
+  Audita `auth/atualizar`.
+- Integrações: `obter` retorna `{email: {configurado, origem: conta|ambiente|null, mascarada}}`;
   máscara `aaa…zzzz` ou `••••` (`:80-83`); chave da conta sobrepõe `RESEND_API_KEY`.
   `salvar` aceita `null|''` (limpa) ou 10–500 chars, senão 400.
 

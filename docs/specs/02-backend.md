@@ -6,13 +6,19 @@ Todo `AppController` usa `@UseGuards(AuthGuard)` na classe
 ## Receitas
 
 - `POST /receitas` (`app.controller.ts:10`) → `createReceita`.
-- `GET /receitas?contaId=` (`:15`) → lista, filtro opcional por conta.
-- `PUT /receitas/:id` (`:27`) → edita um item (body completo exigido).
+- `GET /receitas?contaId=` (`:15`, `ContaQueryDto`) → lista, filtro opcional por conta.
+- `PUT /receitas/:id` (`:27`, `UpdateReceitaDto`) → edita um item (body completo exigido).
 - `DELETE /receitas/:id` 204 (`:21`) → exclui um item.
 
-Regras (`app.service.ts`):
+Regras (`app.service.ts` + DTOs em `dto/lancamentos.dto.ts`, `dto/consulta.dto.ts`):
 
-- `assertLancamento` (`:12-21`): campos presentes/não-vazios + `valor: number > 0`, senão 400.
+- Validação em duas camadas: o pipe global (`whitelist + forbidNonWhitelisted +
+  transform`) barra campo extra e converte tipos; o service aplica regra de negócio.
+  Query inválida (`contaId` não-inteiro, `mes` fora de `YYYY-MM`, `escopo` ≠ `grupo`)
+  retorna 400 via DTO.
+- `assertLancamento`: `data` `YYYY-MM-DD` com calendário real, `valor` number finito
+  `> 0` com teto `1_000_000_000_000`, `categoria/origem/descricao ≤ 120`,
+  `formaPagamento ≤ 80`, `nota ≤ 2000`, senão 400. Parcelado usa valores normalizados.
 - Receita exige `[data, valor, categoria, origem]` (`:66,:152`).
 - `assertConta` (`:56-63`): `contaId` inteiro + pertence ao usuário, senão 400.
 - Update/delete buscam por `{id, usuarioId}`; dono divergente → 404
@@ -21,10 +27,10 @@ Regras (`app.service.ts`):
 
 ## Despesas e parcelas
 
-- `POST /despesas` (`:32`) → cria 1 ou N (campo `parcelas` 1–21).
-- `GET /despesas?contaId=` (`:37`) → lista.
+- `POST /despesas` (`:32`) → cria 1 ou N (campo `parcelas` 1–21, DTO + `assertParcelas`).
+- `GET /despesas?contaId=` (`:37`, `ContaQueryDto`) → lista.
 - `PUT /despesas/:id` (`:52`) → edita só 1 item, nunca re-parcelar (`:177-201`).
-- `DELETE /despesas/:id[?escopo=grupo]` 200 (`:43`) → sem escopo apaga 1;
+- `DELETE /despesas/:id[?escopo=grupo]` 200 (`:43`, `DeleteDespesaQueryDto`) → sem escopo apaga 1;
   com `escopo=grupo` apaga a parcela toda (`:233-247`, retorna `{excluidas}`).
   Sem `grupoParcela`, apaga 1 mesmo com escopo (`:237`).
 
@@ -41,8 +47,8 @@ Desdobro (`:116-149`):
 
 ## Resumo e contagem
 
-- `GET /resumo?mes=YYYY-MM&contaId=` (`:57`) → `{mes, totalReceitas, totalDespesas, saldo}`.
-  `mes` default = mês atual (`:274`); filtra `data.startsWith(ref)` em memória (`:282-286`).
+- `GET /resumo?mes=YYYY-MM&contaId=` (`:57`, `ResumoQueryDto`) → `{mes, totalReceitas, totalDespesas, saldo}`.
+  `mes` default = mês atual (`:274`); `mes` inválido → 400; filtra `data.startsWith(ref)` em memória (`:282-286`).
 - `GET /contagem` (`:63`) → `countBy({usuarioId})` de contas, receitas, despesas,
   categorias e formas (`:291-306`).
 

@@ -22,4 +22,6 @@ Inventário fiel do comportamento atual do código (set/2026). Sem proposta de f
 - Backend: `backend/src` flat, sem módulos por feature. Tudo no `AppModule`.
 - Frontend: `frontend/src`, `HashRouter`, `api.ts` é o único ponto de rede.
 - Toda rota protegida exige `Authorization: Bearer <token>` e escopa por `usuarioId`.
-- Validação é manual nos services (`BadRequestException`), sem class-validator/DTOs.
+- Validação em duas camadas: DTOs `class-validator` (`backend/src/dto/`, pipe global
+  com `whitelist + forbidNonWhitelisted + transform`) para forma/tamanho/tipos, e
+  regras de negócio manuais nos services (`BadRequestException`).

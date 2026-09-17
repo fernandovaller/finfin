@@ -7,7 +7,7 @@ string[], contas: Conta[], initial?, submitLabel, submitting, onSubmit, onErro`.
 `LancamentoValues` (`:6-15`): `{data, valor, categoria, origem, formaPagamento,
 contaId: number | '', nota, parcelas}`.
 
-- Máscara `mascaraMoeda` (`:32-38`): dígitos → centavos → pt-BR 2 casas. Input
+- Máscara `mascaraMoeda` (`:32-38`): dígitos → centavos → 2 casas no `localeIntl()`. Input
   `type=text inputMode=numeric`, só dígitos slice 12, prefixo `R$`. Submit converte
   `Number/100`.
 - Defaults: `data` hoje; `categoria opcoes[0]`; `contaId` principal ou primeira.
@@ -23,8 +23,8 @@ contaId: number | '', nota, parcelas}`.
 
 `OfxItem`: `{fitid, data ISO, valor > 0, tipo, descricao}`. `tag` regex `<NOME>([^<\r\n]*)`
 case-insensitive. Exige `<OFX>`; split `<STMTTRN>`; `DTPOSTED` → `YYYY-MM-DD`;
-`TRNAMT` (`,` → `.`), pula NaN/0; sinal → tipo; `MEMO || NAME || 'Lançamento OFX'`
-slice 200; dedup `FITID` intra-arquivo; sort por data.
+`TRNAMT` (`,` → `.`), pula NaN/0; sinal → tipo; `MEMO || NAME || t('ofx.lancamento')`
+slice 200; dedup `FITID` intra-arquivo; sort por data. Erros via `t('ofx.*')`.
 
 ## `Graficos.tsx` — recharts
 
@@ -36,8 +36,9 @@ paddingAngle 2`; centro total; legenda % + valor.
 
 ## `ui.tsx` — primitivas
 
-- Formatação (`:5-27`): `BRL` (Intl pt-BR), `mesAtual`, `mesLabel` (long pt-BR),
-  `deslocarMes`, `formatarData` (ISO → DD/MM), `pluralLancamentos`.
+- Formatação (`:5-27`): `BRL` (Intl pt-BR fixo), `mesAtual`, `mesLabel` (long no
+  `localeIntl()`), `deslocarMes`, `formatarData` (ISO → DD/MM), `pluralLancamentos`
+  via `t('comum.lancamentos')`. Componentes com strings via `t('ui.*')`.
 - Cores (`:31-67`): `COR_MAP` badge light/dark, `COR_SWATCH` dot, `BadgeCategoria`.
 - Ícones SVG stroke (`:71-167`): Casa, Extrato, Grafico, Tag, Carteira, Seta, Lapiz,
   Lixeira, Upload, Usuario, Engrenagem. `TituloPagina` (`:171-186`).
@@ -58,5 +59,5 @@ Tipos `Tema = claro|escuro|sistema`, `Largura = fluida|fixa` (`:3-4`); chaves
 ## Build (`vite.config.ts`, `package.json`)
 
 `tailwindcss()` plugin; `BACKEND_PORT → 3001, FRONTEND_PORT → 3000`; `server.port` +
-proxy `/api`; `preview.port`. Deps: react 19, router 7, recharts 3, tailwind 4;
-scripts `dev / build (tsc -b && vite build) / preview`; sem test/lint.
+proxy `/api`; `preview.port`. Deps: react 19, router 7, recharts 3, tailwind 4,
+i18next + react-i18next; scripts `dev / build (tsc -b && vite build) / preview`; sem test/lint.

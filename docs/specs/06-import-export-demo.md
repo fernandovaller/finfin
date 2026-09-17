@@ -7,9 +7,11 @@ Todas as rotas abaixo usam `AuthGuard` e escopo `usuarioId`.
 - `GET /exportar` (`app.controller.ts:68`) → `{app: 'finfin', versao: 1, exportadoEm,
   contas, receitas, despesas, categorias, formasPagamento}` ordenado `id ASC`
   (`app.service.ts:309-332`). Audita `dados/exportar`.
-- `POST /importar {modo, backup}` (`:78`) → transacional (`:571`).
-  - `modo` mesclar|substituir (`:551-554`); `backup.app === 'finfin'` (`:559-561`);
-    listas arrays `≤ 2000` (`:562-570`).
+- `POST /importar {modo, backup}` (`:78`, `ImportarBackupDto`) → transacional (`:571`).
+  - `modo` mesclar|substituir (default mesclar); `backup` objeto obrigatório;
+    listas arrays `≤ 2000`. DTOs `Backup*` toleram os campos que o próprio export
+    emite (`id/usuarioId/demo/versao/exportadoEm`): identidade/posse são ignoradas
+    pelo service — só `contas[].id` é lido, para remapear `contaId`.
   - `substituir` deleta despesas+receitas+contas antes (`:573-575`).
   - Categorias dedup por `(usuarioId, nome, tipo)` (`:578-589`); formas por nome
     (`:591-601`); contas por nome com `mapaContas idAntigo → idNovo` (`:602-627`),
@@ -21,7 +23,7 @@ Todas as rotas abaixo usam `AuthGuard` e escopo `usuarioId`.
 
 ## CSV
 
-- `GET /exportar/csv?tipo=receitas|despesas` (`:73`) → separador `;`
+- `GET /exportar/csv?tipo=receitas|despesas` (`:73`, `ExportarCsvQueryDto`) → separador `;`
   (`app.service.ts:335-377`). Escape `"` → `""` + quote se `[;"\n]`; prefixo `'`
   anti-fórmula em `^[=+\-@\t\r]` (`:339-344`).
 - Header receitas: `id,data,valor,categoria,origem,formaPagamento,contaId,nota`;
@@ -35,7 +37,9 @@ Todas as rotas abaixo usam `AuthGuard` e escopo `usuarioId`.
   sinal → tipo; `abs round 2`; `MEMO || NAME || 'Lançamento OFX'` (slice 200);
   `FITID || null` com dedup intra-arquivo; sort por data.
 - `POST /importar/ofx {contaId, categoriaReceita, categoriaDespesa, formaPagamento?, itens[]}`
-  (`:83`), transacional (`app.service.ts:478`).
+  (`:83`, `ImportarOfxDto`), transacional (`app.service.ts:478`). `itens` 1–2000;
+  por item `data` calendário real, `valor > 0`, `tipo` receita|despesa, `fitid ≤ 100`,
+  `descricao ≤ 200`.
   - Conta válida (`:423`); categorias default obrigatórias (`:426-427`); forma, se dada,
     precisa existir (`:430-433`); `itens` array 1–2000 (`:435-440`).
   - Por item: `data YYYY-MM-DD` regex, `valor round 2 casas > 0`, `tipo receita|despesa`,
