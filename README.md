@@ -138,6 +138,27 @@ Base: `http://localhost:3001/api`. Rotas protegidas exigem `Authorization: Beare
 | `POST`          | `/auditoria/:id/restaurar`              | restaura item excluído                 |
 | `DELETE`        | `/auditoria[?antesDe=YYYY-MM-DD]`       | limpa a trilha                         |
 | `GET` / `POST` / `DELETE` | `/dados/demonstracao`        | status / gera / remove demo            |
+| `GET`           | `/saude`                                | saúde pública `{ok, app, versao}` (valida servidor/compatibilidade antes do login; 60/min) |
+
+## App Android
+
+Cliente nativo: [finfin-android](https://github.com/fernandovaller/finfin-android).
+
+Como apontar o app para a sua API (sem rebuild — a URL é 100% runtime, digitada no app):
+
+1. Suba esta API num endereço alcançável pelo celular (IP da LAN ou HTTPS público).
+   Em produção, https é obrigatório (`COOKIE_SECURE=true`, com fail-fast no boot).
+2. No app, informe a base (`https://sua-api.exemplo.com`) — ele valida com
+   `GET /api/saude`, que devolve `{ok: true, app: 'finfin', versao: 1}`.
+3. Login normal (`POST /api/auth/login`): access de 15 min (só em memória) + refresh
+   de 7 dias em cookie persistente, um par por aparelho. Não dispare refreshes
+   concorrentes com o mesmo refresh — a rotação tem anti-replay (o segundo cai em 401).
+4. Contrato completo em [`docs/specs/10-api.md`](docs/specs/10-api.md): DTOs estritos
+   (campo desconhecido → 400), corpo máximo de 1 MB.
+
+Lado servidor, ajuste no `.env`: `FRONTEND_URL` pública (links de recuperação de senha),
+`CORS_ORIGINS` (só necessário para WebView — cliente nativo não envia `Origin`) e
+`CONFIAR_PROXY=true` atrás de reverse proxy (rate-limit por IP real).
 
 Exemplo (cadastro → despesa):
 
