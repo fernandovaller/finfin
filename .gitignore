@@ -20,6 +20,9 @@ dist/
 .env
 .env.local
 
+# Docker
+docker-compose.local.yml
+
 # Logs
 *.log
 npm-debug.log*
